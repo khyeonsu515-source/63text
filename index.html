@@ -370,9 +370,11 @@
   // 설정
   // ─────────────────────────────────────────────
   const NEWS_API_KEY = "__NEWS_API_KEY__";
-  const NEWS_API_BASE = "https://gnews.io/api/v4";
+  const NEWS_API_BASE = "https://newsdata.io/api/1";
   const NEWS_LANG = "ko";
   const NEWS_COUNTRY = "kr";
+  // NewsData.io는 "전체" 개념의 카테고리가 따로 없어서, general 탭은 category 파라미터 없이 요청합니다.
+  const NEWS_DATA_CATEGORY = { general: null };
 
   // Intone 확장 프로그램이 신뢰도/어그로도 분석을 쌓아두는 공유 Firestore.
   // Web API Key는 클라이언트 공개용이며, 접근 제어는 Firestore 보안 규칙이 담당합니다.
@@ -552,7 +554,7 @@
       results.forEach((result, index) => {
         if (!result.found) return;
         const record = firestoreFieldsToObject(result.found.fields);
-        if (record && Array.isArray(record.core_keywords) && record.core_keywords.length) {
+        if (record) {
           map.set(urls[index], record);
         }
       });
@@ -563,13 +565,24 @@
     return map;
   }
 
-  // core_keywords 겹침이 50% 이상인 기존 그룹이 있으면 합류시키고,
+  // 기사별로 그룹핑에 쓸 키워드를 고릅니다. Firestore의 core_keywords(논조 중립적,
+  // 매칭 정확도 높음)가 있으면 그걸 쓰고, 없으면 뉴스 API가 준 자체 keywords로 대체합니다.
+  function articleKeywords(article, analysis) {
+    if (analysis && Array.isArray(analysis.core_keywords) && analysis.core_keywords.length) {
+      return analysis.core_keywords;
+    }
+    if (Array.isArray(article.keywords) && article.keywords.length) {
+      return article.keywords;
+    }
+    return null;
+  }
+
+  // 키워드 겹침이 50% 이상인 기존 그룹이 있으면 합류시키고,
   // 없으면 새 그룹을 만듭니다 (그룹 키워드는 합류할 때마다 합집합으로 확장).
-  function clusterByKeywords(analyzedArticles) {
+  function clusterByKeywords(groupableArticles) {
     const groups = [];
 
-    analyzedArticles.forEach(({ article, analysis }) => {
-      const keywords = analysis.core_keywords;
+    groupableArticles.forEach(({ article, analysis, keywords }) => {
       let bestGroup = null;
       let bestOverlap = 0;
 
@@ -587,7 +600,7 @@
         bestGroup.items.push({ article, analysis });
       } else {
         groups.push({
-          topic: analysis.topic || article.title,
+          topic: analysis?.topic || article.title,
           keywordSet: new Set(keywords),
           items: [{ article, analysis }]
         });
@@ -644,18 +657,19 @@
       return;
     }
 
-    const analyzed = [];
+    const groupable = [];
     const singles = [];
     articles.forEach((article) => {
       const analysis = analysisMap.get(article.url);
-      if (analysis) {
-        analyzed.push({ article, analysis });
+      const keywords = articleKeywords(article, analysis);
+      if (keywords) {
+        groupable.push({ article, analysis, keywords });
       } else {
         singles.push(article);
       }
     });
 
-    const groups = clusterByKeywords(analyzed);
+    const groups = clusterByKeywords(groupable);
 
     groups.forEach((group) => {
       if (group.items.length < 2) {
@@ -687,14 +701,31 @@
   // ─────────────────────────────────────────────
   // API 호출
   // ─────────────────────────────────────────────
+  // pubDate는 "YYYY-MM-DD HH:mm:ss"(UTC) 형식이라 브라우저마다 파싱이 갈릴 수 있어 ISO로 변환합니다.
+  function normalizeArticle(item) {
+    return {
+      title: item.title,
+      url: item.link,
+      image: item.image_url || "",
+      description: item.description || "",
+      publishedAt: item.pubDate ? `${item.pubDate.replace(" ", "T")}Z` : "",
+      source: { name: item.source_name || item.source_id || "출처 미상" },
+      keywords: Array.isArray(item.keywords) ? item.keywords : []
+    };
+  }
+
   async function loadNews() {
     const myToken = ++requestToken;
     renderSkeleton();
     statusEl.textContent = "불러오는 중...";
 
-    const url = activeQuery
-      ? `${NEWS_API_BASE}/search?q=${encodeURIComponent(activeQuery)}&lang=${NEWS_LANG}&country=${NEWS_COUNTRY}&sortby=publishedAt&max=10&apikey=${NEWS_API_KEY}`
-      : `${NEWS_API_BASE}/top-headlines?category=${activeCategory}&lang=${NEWS_LANG}&country=${NEWS_COUNTRY}&max=10&apikey=${NEWS_API_KEY}`;
+    const params = new URLSearchParams({ apikey: NEWS_API_KEY, language: NEWS_LANG, country: NEWS_COUNTRY });
+    if (activeQuery) {
+      params.set("q", activeQuery);
+    } else if (NEWS_DATA_CATEGORY[activeCategory] !== null) {
+      params.set("category", activeCategory);
+    }
+    const url = `${NEWS_API_BASE}/news?${params.toString()}`;
 
     try {
       const response = await fetch(url);
@@ -702,16 +733,16 @@
 
       if (myToken !== requestToken) return; // 이후 요청이 이미 시작된 경우 무시
 
-      if (!response.ok || data.errors) {
+      if (data.status !== "success") {
         statusEl.textContent = "";
         renderNotice(
           "뉴스를 불러오지 못했습니다",
-          `${escapeHtml((data.errors && data.errors[0]) || "알 수 없는 오류")}`
+          `${escapeHtml(data.results?.message || "알 수 없는 오류")}`
         );
         return;
       }
 
-      const articles = (data.articles || []).filter((item) => item.title);
+      const articles = (data.results || []).filter((item) => item.title && item.link).map(normalizeArticle);
       statusEl.textContent = activeQuery
         ? `"${activeQuery}" 검색 결과 ${articles.length}건`
         : `${CATEGORIES.find((c) => c.id === activeCategory)?.label || ""} 뉴스 ${articles.length}건`;
