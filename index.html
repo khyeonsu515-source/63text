@@ -23,6 +23,7 @@
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Noto Sans KR", sans-serif;
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --radius-lg: 20px;
+    --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -53,6 +54,12 @@
     color: var(--text);
     font-family: var(--sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: 8px;
   }
 
   /* ---------- Header ---------- */
@@ -124,6 +131,8 @@
     margin: 0 auto;
   }
 
+  .category-tabs:empty { display: none; }
+
   .category-tab {
     padding: 7px 16px;
     border-radius: 999px;
@@ -134,7 +143,7 @@
     font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 200ms var(--ease);
+    transition: color 200ms var(--ease), border-color 200ms var(--ease), background 200ms var(--ease);
   }
 
   .category-tab:hover { border-color: var(--accent); color: var(--text); }
@@ -173,6 +182,7 @@
     color: var(--muted);
     font-weight: 500;
     width: fit-content;
+    max-width: 100%;
   }
 
   .legend .swatch {
@@ -291,6 +301,12 @@
     margin-top: 6px;
   }
 
+  .topic-empty {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
   .stance-summary {
     display: flex;
     flex-wrap: wrap;
@@ -330,7 +346,9 @@
       6px -8px 20px -14px var(--glow-b, transparent);
   }
 
-  .article-card-border:hover {
+  /* 마우스 호버 또는 키보드 포커스(자식 링크에 focus) 시 카드를 넓혀 세부 분석을 펼칩니다. */
+  .article-card-border:hover,
+  .article-card-border:focus-within {
     grid-column: span 2;
     z-index: 20;
     transform: translateY(-6px);
@@ -348,6 +366,8 @@
     box-shadow: var(--shadow-sm);
     cursor: pointer;
   }
+
+  .article-card--nolink { cursor: default; }
 
   .article-card .thumb {
     width: 100%;
@@ -367,7 +387,8 @@
     transition: transform 550ms var(--ease);
   }
 
-  .article-card-border:hover .thumb img {
+  .article-card-border:hover .thumb img,
+  .article-card-border:focus-within .thumb img {
     transform: scale(1.06);
   }
 
@@ -411,6 +432,12 @@
     color: var(--text);
   }
 
+  .article-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .article-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
   .article-dek {
     margin: 0;
     font-size: 12.5px;
@@ -427,8 +454,8 @@
     font-weight: 700;
   }
 
-  /* 카드에 마우스를 올리면(.article-card-border:hover) 카드가 그리드 2칸으로
-     넓어지면서(위 grid-column: span 2) 이 세부 분석 패널이 펼쳐집니다. */
+  /* 카드에 마우스를 올리거나(:hover) 키보드로 포커스(:focus-within)하면 카드가
+     그리드 2칸으로 넓어지면서(grid-column: span 2) 이 세부 분석 패널이 펼쳐집니다. */
   .article-detail {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -439,7 +466,8 @@
     transition: max-height 360ms var(--ease), opacity 240ms var(--ease);
   }
 
-  .article-card-border:hover .article-detail {
+  .article-card-border:hover .article-detail,
+  .article-card-border:focus-within .article-detail {
     max-height: 360px;
     opacity: 1;
   }
@@ -480,7 +508,8 @@
     transition: width 560ms var(--ease) 120ms;
   }
 
-  .article-card-border:hover .breakdown-fill {
+  .article-card-border:hover .breakdown-fill,
+  .article-card-border:focus-within .breakdown-fill {
     width: var(--target-width);
   }
 
@@ -521,13 +550,22 @@
     border-radius: 999px;
     background: var(--bg);
     border: 1px solid var(--border);
-    transition: all 200ms var(--ease);
+    transition: background 200ms var(--ease), border-color 200ms var(--ease), color 200ms var(--ease), transform 200ms var(--ease);
   }
   .article-link:hover {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
     transform: translateX(2px);
+  }
+
+  /* 모션에 민감한 사용자를 위해 애니메이션/전환을 비활성화합니다. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 </style>
 </head>
@@ -544,7 +582,7 @@
   </div>
 </header>
 
-<nav class="category-tabs" id="categoryTabs"></nav>
+<nav class="category-tabs" id="categoryTabs" aria-label="카테고리"></nav>
 
 <main id="app">
   <p class="status-line">불러오는 중...</p>
@@ -556,21 +594,36 @@
     getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc
   } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+  // ═══════════════════════════════════════════════════════════════
+  // 설정
+  // ═══════════════════════════════════════════════════════════════
+
   // Intone 확장 프로그램이 신뢰도/관점 분석을 쌓아두는 공유 Firestore.
   // 웹 API 키는 클라이언트 공개용이며, 접근 제어는 Firestore 보안 규칙(allow read: if true)이 담당합니다.
   const firebaseConfig = {
     apiKey: "AIzaSyBQT-UNNgB5Ujlkw_RFsPNsfKfj0jIXQnY",
     projectId: "intone-analysis"
   };
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
 
-  const appEl = document.getElementById("app");
+  const TOPIC_FETCH_LIMIT = 30;          // 한 번에 불러올 최근 주제 수
+  const RELATED_OVERLAP_THRESHOLD = 0.2; // 두 주제를 "연관"으로 볼 키워드 겹침 비율(Jaccard)
+  const CARD_STAGGER_MS = 55;            // 카드 등장 애니메이션 간격
+  const SECTION_STAGGER_MS = 85;         // 섹션 등장 애니메이션 간격
+  const MAX_STAGGER_STEPS = 8;           // 지연 누적 상한 (많은 항목일 때 마지막이 너무 늦게 뜨지 않게)
 
-  const editionDateEl = document.getElementById("editionDate");
-  editionDateEl.textContent = new Date().toLocaleDateString("ko-KR", {
-    year: "numeric", month: "long", day: "numeric", weekday: "long"
-  });
+  // Intone이 새 topic을 만들 때 매기는 고정 대분류와 순서를 맞춥니다.
+  const CATEGORY_ORDER = ["정치", "경제", "사회", "국제", "문화", "과학기술", "스포츠", "연예", "기타"];
+
+  // 부정 ~ 긍정 단일 스펙트럼. 배열 순서가 곧 스펙트럼 위치를 나타냅니다.
+  const STANCE_ORDER = ["매우 부정적", "약간 부정적", "중립적", "약간 긍정적", "매우 긍정적"];
+  const STANCE_COLORS = {
+    "매우 부정적": { bg: "rgba(239, 68, 68, 0.14)", fg: "#dc2626" },
+    "약간 부정적": { bg: "rgba(249, 115, 22, 0.14)", fg: "#c2620a" },
+    "중립적":     { bg: "rgba(107, 114, 128, 0.14)", fg: "#6b7280" },
+    "약간 긍정적": { bg: "rgba(56, 145, 255, 0.14)",  fg: "#2563eb" },
+    "매우 긍정적": { bg: "rgba(99, 102, 241, 0.16)",  fg: "#4f46e5" }
+  };
+  const STANCE_FALLBACK = STANCE_COLORS["중립적"];
 
   // Intone 확장의 세부 분석 팝업(content-popup.js)과 항목/배점을 그대로 맞춘
   // 목록입니다 — 같은 데이터를 같은 기준으로 보여줘야 하므로.
@@ -589,36 +642,25 @@
     ["hidden_key_info", "핵심 정보 은폐", 15]
   ];
 
-  function renderBreakdownRows(breakdown, rows) {
-    return rows.map(([key, label, max]) => {
-      const value = Number.isFinite(Number(breakdown?.[key])) ? Number(breakdown[key]) : 0;
-      const pct = max ? Math.max(0, Math.min(100, Math.round((value / max) * 100))) : 0;
-      return `
-        <div class="breakdown-row">
-          <span class="breakdown-label">${escapeHtml(label)}</span>
-          <div class="breakdown-track"><div class="breakdown-fill" style="--target-width:${pct}%"></div></div>
-          <span class="breakdown-value">${value}/${max}</span>
-        </div>
-      `;
-    }).join("");
-  }
-
-  // 부정 ~ 긍정 단일 스펙트럼. 순서가 곧 스펙트럼 위치를 나타냅니다.
-  const STANCE_COLORS = {
-    "매우 부정적": { bg: "rgba(239, 68, 68, 0.14)", fg: "#dc2626" },
-    "약간 부정적": { bg: "rgba(249, 115, 22, 0.14)", fg: "#c2620a" },
-    "중립적":     { bg: "rgba(107, 114, 128, 0.14)", fg: "#6b7280" },
-    "약간 긍정적": { bg: "rgba(56, 145, 255, 0.14)",  fg: "#2563eb" },
-    "매우 긍정적": { bg: "rgba(99, 102, 241, 0.16)",  fg: "#4f46e5" }
-  };
-  const STANCE_ORDER = ["매우 부정적", "약간 부정적", "중립적", "약간 긍정적", "매우 긍정적"];
-
   const PLACEHOLDER_ICON = `
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/>
       <path d="M7 9H17M7 13H14M7 17H11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
     </svg>
   `;
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const appEl = document.getElementById("app");
+  const categoryTabsEl = document.getElementById("categoryTabs");
+
+  document.getElementById("editionDate").textContent = new Date().toLocaleDateString("ko-KR", {
+    year: "numeric", month: "long", day: "numeric", weekday: "long"
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 순수 유틸리티
+  // ═══════════════════════════════════════════════════════════════
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -628,9 +670,21 @@
       .replace(/"/g, "&quot;");
   }
 
+  // 공개 쓰기 가능한 Firestore에서 온 URL이므로, http/https만 신뢰합니다.
+  // javascript:, data: 같은 위험한 스킴은 빈 문자열로 걸러 링크/이동에서 제외합니다.
+  function safeHttpUrl(url) {
+    try {
+      const parsed = new URL(url);
+      return (parsed.protocol === "http:" || parsed.protocol === "https:") ? parsed.href : "";
+    } catch (error) {
+      return "";
+    }
+  }
+
   function timeAgo(epochMs) {
     if (!epochMs) return "";
     const diffMs = Date.now() - epochMs;
+    if (diffMs < 0) return "방금 전";
     const mins = Math.floor(diffMs / 60000);
     if (mins < 1) return "방금 전";
     if (mins < 60) return `${mins}분 전`;
@@ -653,10 +707,14 @@
     return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
+  function staggerDelay(index, step) {
+    return Math.min(index, MAX_STAGGER_STEPS) * step;
+  }
+
+  // ── 점수 → 색상 ────────────────────────────────────────────────
   // 0~100 점수를 빨강(나쁨)~주황~노랑~초록(좋음)의 다단계 색상으로 변환합니다.
-  // hue만 회전시키면 중간 구간(초록/빨강 사이)이 탁한 올리브색으로 뭉개져서
-  // 점수 차이가 잘 대비되어 보이지 않기 때문에, 뚜렷이 구분되는 색 정지점들
-  // 사이를 RGB로 보간합니다 — 신호등 색처럼 한눈에 좋고 나쁨이 대비됩니다.
+  // hue만 회전시키면 중간 구간이 탁한 올리브색으로 뭉개져 대비가 약해지므로,
+  // 뚜렷이 구분되는 색 정지점 사이를 RGB로 보간합니다 — 신호등처럼 한눈에 대비됩니다.
   const SCORE_COLOR_STOPS = [
     { at: 0,   rgb: [220, 38, 38] },   // 빨강 (나쁨)
     { at: 33,  rgb: [249, 115, 22] },  // 주황
@@ -696,6 +754,21 @@
     return [r, g, b].map((c) => Math.round(c + (255 - c) * amount));
   }
 
+  // ── Jaccard 유사도: 두 키워드 집합의 교집합 크기 / 합집합 크기 ──
+  function keywordOverlapRatio(keywordsA, keywordsB) {
+    const setA = new Set(Array.isArray(keywordsA) ? keywordsA : []);
+    const setB = new Set(Array.isArray(keywordsB) ? keywordsB : []);
+    if (!setA.size || !setB.size) return 0;
+    let intersection = 0;
+    setA.forEach((kw) => { if (setB.has(kw)) intersection += 1; });
+    const union = new Set([...setA, ...setB]).size;
+    return union === 0 ? 0 : intersection / union;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 렌더링 조각
+  // ═══════════════════════════════════════════════════════════════
+
   function renderNotice(title, detail) {
     appEl.innerHTML = `
       <div class="notice">
@@ -710,17 +783,35 @@
     appEl.innerHTML = `<p class="status-line">불러오는 중...</p><div class="article-grid">${items}</div>`;
   }
 
+  function renderBreakdownRows(breakdown, rows) {
+    return rows.map(([key, label, max]) => {
+      const raw = Number(breakdown?.[key]);
+      const value = Number.isFinite(raw) ? Math.max(0, Math.min(max, raw)) : 0;
+      const pct = max ? Math.round((value / max) * 100) : 0;
+      return `
+        <div class="breakdown-row">
+          <span class="breakdown-label">${escapeHtml(label)}</span>
+          <div class="breakdown-track"><div class="breakdown-fill" style="--target-width:${pct}%"></div></div>
+          <span class="breakdown-value">${value}/${max}</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // 이 주제에 달린 기사들의 관점(stance) 분포를 스펙트럼 순서대로 칩으로 보여줍니다.
   function stanceSummary(articles) {
     const counts = new Map();
     articles.forEach(({ analysis }) => {
       const stance = analysis.direction?.stance;
-      if (!stance) return;
-      counts.set(stance, (counts.get(stance) || 0) + 1);
+      if (stance) counts.set(stance, (counts.get(stance) || 0) + 1);
     });
     if (!counts.size) return "";
 
-    const chips = STANCE_ORDER.filter((stance) => counts.has(stance)).map((stance) => {
-      const color = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
+    // 알려진 스펙트럼 값을 순서대로, 그 외(구버전 값 등)는 뒤에 붙여 하나도 빠뜨리지 않습니다.
+    const known = STANCE_ORDER.filter((stance) => counts.has(stance));
+    const unknown = [...counts.keys()].filter((stance) => !STANCE_ORDER.includes(stance));
+    const chips = [...known, ...unknown].map((stance) => {
+      const color = STANCE_COLORS[stance] || STANCE_FALLBACK;
       return `<span class="stance-chip" style="background:${color.bg};color:${color.fg}">${escapeHtml(stance)} ${counts.get(stance)}</span>`;
     }).join("");
 
@@ -728,22 +819,25 @@
   }
 
   function createArticleCard(article, analysis, delayMs, topicLabel) {
+    const href = safeHttpUrl(article.url);
+
     const stance = analysis.direction?.stance;
-    const stanceColor = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
+    const stanceColor = STANCE_COLORS[stance] || STANCE_FALLBACK;
     const stanceBadge = stance
       ? `<span class="stance-badge" style="background:${stanceColor.bg};color:${stanceColor.fg}">${escapeHtml(stance)}</span>`
       : "";
-    // 주제 섹션 헤더 없이 단독으로 표시되는 카드(비교 대상이 없는 1개짜리
-    // 주제를 모아둔 영역)에서만 어떤 이슈인지 알 수 있도록 작게 표시합니다.
+
+    // 주제 섹션 헤더 없이 단독으로 표시되는 카드(기사 1개짜리 주제 모음)에서만
+    // 어떤 이슈인지 알 수 있도록 작게 표시합니다.
     const topicKicker = topicLabel
       ? `<span class="article-topic-kicker">${escapeHtml(topicLabel)}</span>`
       : "";
+
     const reason = analysis.direction?.reason
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
       : "";
 
-    // 카드에 마우스를 올리면(그리드 2칸으로 넓어지면서) 펼쳐지는 세부 분석
-    // 패널 — Intone 확장의 세부 분석 팝업과 같은 항목/배점을 보여줍니다.
+    // 카드를 넓힐 때(호버/포커스) 펼쳐지는 세부 분석 — Intone 팝업과 같은 항목/배점.
     const detailPanel = `
       <div class="article-detail">
         <div class="detail-col">
@@ -757,33 +851,34 @@
       </div>
     `;
 
-    // 실제 기사 제목이 있으면 그걸 메인 헤드라인으로 보여주고, AI 한 줄 요약은
-    // 그 아래 작은 보조 설명으로 덧붙입니다. article_title이 생기기 전에
-    // 분석된 옛날 기사는 요약을 대신 메인으로 보여줍니다.
+    // 실제 기사 제목을 메인 헤드라인으로, AI 한 줄 요약은 그 아래 보조 설명으로.
+    // article_title이 없던 옛날 기사는 요약을 대신 헤드라인 자리에 보여줍니다.
     const hasTitle = Boolean(analysis.article_title);
-    const headlineText = hasTitle ? analysis.article_title : (analysis.article_summary || "");
+    const headlineText = escapeHtml(hasTitle ? analysis.article_title : (analysis.article_summary || "제목 없음"));
+    const headline = href
+      ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${headlineText}</a>`
+      : headlineText;
     const dek = hasTitle && analysis.article_summary
       ? `<p class="article-dek">${escapeHtml(analysis.article_summary)}</p>`
       : "";
 
-    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 신호등 색(빨강~
-    // 주황~노랑~초록)으로 또렷하게 대비시키고, 같은 두 색을 옅게 밝혀서
-    // 은은한 글로우(평상시엔 살짝, 호버 시엔 진하게)도 같이 만듭니다.
+    const originLink = href
+      ? `<a class="article-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>`
+      : "";
+
+    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 신호등 색으로 또렷하게
+    // 대비시키고, 같은 두 색을 옅게 밝혀 은은한 글로우(호버 시 진하게)도 만듭니다.
     const credibilityRgb = scoreToRgbColor(analysis.credibility_score, false);
     const clickbaitRgb = scoreToRgbColor(analysis.clickbait_score, true);
-    const credibilityColor = rgbToCss(credibilityRgb);
-    const clickbaitColor = rgbToCss(clickbaitRgb);
-    const credibilityGlow = rgbToCss(lightenRgb(credibilityRgb, 0.15), 0.55);
-    const clickbaitGlow = rgbToCss(lightenRgb(clickbaitRgb, 0.15), 0.55);
 
     const wrapper = document.createElement("div");
     wrapper.className = "article-card-border";
-    wrapper.style.background = `linear-gradient(45deg, ${clickbaitColor}, ${credibilityColor})`;
-    wrapper.style.setProperty("--glow-a", clickbaitGlow);
-    wrapper.style.setProperty("--glow-b", credibilityGlow);
+    wrapper.style.background = `linear-gradient(45deg, ${rgbToCss(clickbaitRgb)}, ${rgbToCss(credibilityRgb)})`;
+    wrapper.style.setProperty("--glow-a", rgbToCss(lightenRgb(clickbaitRgb, 0.15), 0.55));
+    wrapper.style.setProperty("--glow-b", rgbToCss(lightenRgb(credibilityRgb, 0.15), 0.55));
     wrapper.style.animationDelay = `${delayMs}ms`;
     wrapper.innerHTML = `
-      <div class="article-card">
+      <div class="article-card${href ? "" : " article-card--nolink"}">
         <div class="thumb">
           ${analysis.image_url ? `<img src="${escapeHtml(analysis.image_url)}" alt="" loading="lazy">` : PLACEHOLDER_ICON}
         </div>
@@ -791,55 +886,61 @@
           ${topicKicker}
           <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
           <div class="article-headline">
-            <h3 class="article-title">${escapeHtml(headlineText)}</h3>
+            <h3 class="article-title">${headline}</h3>
             ${dek}
           </div>
           ${stanceBadge}
           ${detailPanel}
           ${reason}
-          <a class="article-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>
+          ${originLink}
         </div>
       </div>
     `;
 
-    const thumbImg = wrapper.querySelector(".thumb img");
+    const thumbEl = wrapper.querySelector(".thumb");
+    const thumbImg = thumbEl.querySelector("img");
     if (thumbImg) {
-      const thumbEl = wrapper.querySelector(".thumb");
       thumbImg.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
     }
 
-    // "원문 보기" 버튼을 안 눌러도 카드 어디를 클릭하든 기사로 이동합니다.
-    // 다만 "이 관점으로 본 이유" 펼치기나 실제 링크 자체를 클릭한 경우는
-    // 그 요소의 원래 동작(펼치기/새 탭 열기)만 일어나야 하므로 건너뜁니다.
-    const cardEl = wrapper.querySelector(".article-card");
-    cardEl.addEventListener("click", (event) => {
-      if (event.target.closest("a") || event.target.closest("details")) {
-        return;
-      }
-      window.open(article.url, "_blank", "noopener,noreferrer");
-    });
+    // 카드 어디를 클릭하든 기사로 이동(편의 기능). 단, (1) 링크/펼치기(details) 요소를
+    // 눌렀거나 (2) 텍스트를 드래그 선택 중이거나 (3) 안전한 URL이 없으면 건너뜁니다.
+    if (href) {
+      const cardEl = wrapper.querySelector(".article-card");
+      cardEl.addEventListener("click", (event) => {
+        if (event.target.closest("a, details")) return;
+        if (String(window.getSelection?.() || "").length > 0) return;
+        window.open(href, "_blank", "noopener,noreferrer");
+      });
+    }
 
     return wrapper;
   }
 
-  // ─────────────────────────────────────────────
-  // 주제별 기사 로딩 — topics.articleUrls를 해시해 analysisResults에서 조회
-  // ─────────────────────────────────────────────
-  async function loadTopicArticles(topic) {
-    const urls = Array.isArray(topic.articleUrls) ? topic.articleUrls : [];
-    const docIds = await Promise.all(urls.map((url) => sha256Hex(url)));
-    const articleDocs = await Promise.all(
-      docIds.map((docId) => getDoc(doc(db, "analysisResults", docId)).catch(() => null))
-    );
-
-    const articles = [];
-    articleDocs.forEach((docSnap, index) => {
-      if (!docSnap || !docSnap.exists()) return; // 분석 기록이 없으면 조용히 건너뜁니다.
-      const analysis = docSnap.data();
-      if (!analysis.is_article) return;
-      articles.push({ article: { url: urls[index] }, analysis });
+  function buildArticleGrid(items) {
+    const gridEl = document.createElement("div");
+    gridEl.className = "article-grid";
+    items.forEach(({ article, analysis, topicLabel }, index) => {
+      gridEl.appendChild(createArticleCard(article, analysis, staggerDelay(index, CARD_STAGGER_MS), topicLabel));
     });
-    return articles;
+    return gridEl;
+  }
+
+  function topicHeaderHtml(topic, metaText, isClustered) {
+    const relatedTag = isClustered ? `<span class="related-tag">관련 이슈</span>` : "";
+    const categoryKicker = topic.category
+      ? `<span class="topic-category">${escapeHtml(topic.category)}</span>`
+      : "";
+    return `
+      <div class="topic-header">
+        <div class="topic-title-block">
+          ${relatedTag}
+          ${categoryKicker}
+          <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
+        </div>
+        <span class="topic-meta">${escapeHtml(metaText)}</span>
+      </div>
+    `;
   }
 
   function renderTopicSection(topic, articles, sectionDelayMs, isClustered) {
@@ -847,114 +948,68 @@
     sectionEl.className = isClustered ? "topic-section clustered" : "topic-section";
     sectionEl.style.animationDelay = `${sectionDelayMs}ms`;
 
-    const relatedTag = isClustered ? `<span class="related-tag">관련 이슈</span>` : "";
-    const categoryKicker = topic.category
-      ? `<span class="topic-category">${escapeHtml(topic.category)}</span>`
-      : "";
-
     if (!articles.length) {
-      sectionEl.innerHTML = `
-        <div class="topic-header">
-          <div class="topic-title-block">
-            ${relatedTag}
-            ${categoryKicker}
-            <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
-          </div>
-          <span class="topic-meta">${escapeHtml(timeAgo(topic.updatedAt))} 업데이트</span>
-        </div>
-        <p class="status-line">이 이슈에 연결된 기사의 분석 기록을 찾지 못했습니다.</p>
-      `;
+      sectionEl.innerHTML =
+        topicHeaderHtml(topic, `${timeAgo(topic.updatedAt)} 업데이트`, isClustered) +
+        `<p class="topic-empty">이 이슈에 연결된 기사의 분석 기록을 찾지 못했습니다.</p>`;
       return sectionEl;
     }
 
-    sectionEl.innerHTML = `
-      <div class="topic-header">
-        <div class="topic-title-block">
-          ${relatedTag}
-          ${categoryKicker}
-          <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
-        </div>
-        <span class="topic-meta">${articles.length}개 매체 보도 · ${escapeHtml(timeAgo(topic.updatedAt))} 업데이트</span>
-      </div>
-      ${stanceSummary(articles)}
-    `;
-
-    const gridEl = document.createElement("div");
-    gridEl.className = "article-grid";
-    articles.forEach(({ article, analysis }, index) => {
-      gridEl.appendChild(createArticleCard(article, analysis, index * 60));
-    });
-    sectionEl.appendChild(gridEl);
-
+    sectionEl.innerHTML =
+      topicHeaderHtml(topic, `${articles.length}개 매체 보도 · ${timeAgo(topic.updatedAt)} 업데이트`, isClustered) +
+      stanceSummary(articles);
+    sectionEl.appendChild(buildArticleGrid(articles));
     return sectionEl;
   }
 
-  // Intone이 새 topic을 만들 때 매기는 고정 대분류와 순서를 맞춥니다.
-  const CATEGORY_ORDER = ["정치", "경제", "사회", "국제", "문화", "과학기술", "스포츠", "연예", "기타"];
-  const categoryTabsEl = document.getElementById("categoryTabs");
+  // ═══════════════════════════════════════════════════════════════
+  // 데이터 로딩
+  // ═══════════════════════════════════════════════════════════════
 
-  let currentSections = [];
-  let activeCategory = "전체";
+  // 한 주제(topic)의 articleUrls를 해시해 analysisResults에서 분석 기록을 조회합니다.
+  // 중복 URL은 한 번만, 기록이 없거나 기사가 아닌 문서는 조용히 건너뜁니다.
+  async function loadTopicArticles(topic) {
+    const urls = [...new Set((Array.isArray(topic.articleUrls) ? topic.articleUrls : []).filter(Boolean))];
+    const docIds = await Promise.all(urls.map((url) => sha256Hex(url)));
+    const articleDocs = await Promise.all(
+      docIds.map((docId) => getDoc(doc(db, "analysisResults", docId)).catch(() => null))
+    );
 
-  function renderCategoryTabs() {
-    const present = new Set(currentSections.map(({ topic }) => topic.category).filter(Boolean));
-    if (!present.size) {
-      categoryTabsEl.innerHTML = "";
-      return;
-    }
-
-    const categories = ["전체", ...CATEGORY_ORDER.filter((c) => present.has(c))];
-    categoryTabsEl.innerHTML = categories.map((category) => `
-      <button class="category-tab${category === activeCategory ? " active" : ""}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>
-    `).join("");
-
-    categoryTabsEl.querySelectorAll(".category-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeCategory = btn.dataset.category;
-        renderCategoryTabs();
-        renderFilteredFeed();
-      });
+    const articles = [];
+    articleDocs.forEach((docSnap, index) => {
+      if (!docSnap || !docSnap.exists()) return;
+      const analysis = docSnap.data();
+      if (!analysis || !analysis.is_article) return;
+      articles.push({ article: { url: urls[index] }, analysis });
     });
+    return articles;
   }
 
-  // 서로 다른 topic이라도 core_keywords가 어느 정도 겹치면 연관 있다고 보고
-  // 화면에서 가까운 위치에 묶어서 보여줍니다. topics.keywords는 이미 있는
-  // 값이라 Firestore 스키마 변경이나 추가 조회 없이 클라이언트에서만 계산합니다.
-  const RELATED_TOPIC_OVERLAP_THRESHOLD = 0.2;
+  // ═══════════════════════════════════════════════════════════════
+  // 연관 주제 클러스터링 (키워드 겹침 기반, 클라이언트에서만 계산)
+  // ═══════════════════════════════════════════════════════════════
 
-  // Jaccard 유사도: 두 키워드 집합의 교집합 크기 / 합집합 크기.
-  function keywordOverlapRatio(keywordsA, keywordsB) {
-    const setA = new Set(keywordsA || []);
-    const setB = new Set(keywordsB || []);
-    if (!setA.size || !setB.size) return 0;
-    let intersection = 0;
-    setA.forEach((kw) => { if (setB.has(kw)) intersection += 1; });
-    const union = new Set([...setA, ...setB]).size;
-    return union === 0 ? 0 : intersection / union;
-  }
-
-  // Union-Find로 키워드가 겹치는 topic들을 하나의 묶음으로 그룹화하고,
-  // 묶음은 내부 최신순으로, 묶음끼리는 묶음의 최신 updatedAt 기준으로 정렬합니다.
-  // 반환값은 평평한 배열이며, 각 항목에 isClustered(묶음의 2번째 이후 항목인지)를 붙입니다.
+  // 서로 다른 topic이라도 core_keywords가 어느 정도 겹치면 연관 있다고 보고 Union-Find로
+  // 묶습니다. 묶음 안은 최신순, 묶음끼리는 묶음의 최신 updatedAt 순으로 정렬한 뒤 평평한
+  // 배열로 반환하며, 각 항목에 isClustered(묶음의 2번째 이후 항목인지)를 붙입니다.
   function clusterRelatedTopics(sections) {
     const parent = sections.map((_, i) => i);
-    function find(i) {
+    const find = (i) => {
       while (parent[i] !== i) {
         parent[i] = parent[parent[i]];
         i = parent[i];
       }
       return i;
-    }
-    function union(a, b) {
+    };
+    const union = (a, b) => {
       const rootA = find(a);
       const rootB = find(b);
       if (rootA !== rootB) parent[rootA] = rootB;
-    }
+    };
 
     for (let i = 0; i < sections.length; i += 1) {
       for (let j = i + 1; j < sections.length; j += 1) {
-        const ratio = keywordOverlapRatio(sections[i].topic.keywords, sections[j].topic.keywords);
-        if (ratio >= RELATED_TOPIC_OVERLAP_THRESHOLD) {
+        if (keywordOverlapRatio(sections[i].topic.keywords, sections[j].topic.keywords) >= RELATED_OVERLAP_THRESHOLD) {
           union(i, j);
         }
       }
@@ -967,101 +1022,140 @@
       clusters.get(root).push(section);
     });
 
-    const clusterList = [...clusters.values()].map((members) => {
-      members.sort((a, b) => (b.topic.updatedAt || 0) - (a.topic.updatedAt || 0));
-      return members;
-    });
+    const clusterList = [...clusters.values()];
+    clusterList.forEach((members) => members.sort((a, b) => (b.topic.updatedAt || 0) - (a.topic.updatedAt || 0)));
     clusterList.sort((a, b) => (b[0].topic.updatedAt || 0) - (a[0].topic.updatedAt || 0));
 
     const ordered = [];
     clusterList.forEach((members) => {
-      members.forEach((section, index) => {
-        ordered.push({ ...section, isClustered: index > 0 });
-      });
+      members.forEach((section, index) => ordered.push({ ...section, isClustered: index > 0 }));
     });
     return ordered;
   }
 
-  // 기사가 딱 1개뿐인 주제는 "비교"라는 사이트 취지에 안 맞고, 이런 주제가
-  // 많으면 한 줄(섹션)씩 차지하며 화면을 낭비합니다. 이런 주제들은 개별
-  // 섹션(제목)을 안 만들고 한데 모아 카드 그리드로만 표시합니다 — 그리드는
-  // 여러 줄로 자연스럽게 흐르므로 훨씬 촘촘하게 보여줄 수 있습니다.
+  // ═══════════════════════════════════════════════════════════════
+  // 피드 렌더링 + 상태
+  // ═══════════════════════════════════════════════════════════════
+
+  let currentSections = [];       // [{ topic, articles }]
+  let activeCategory = "전체";
+  let renderGeneration = 0;        // onSnapshot 재호출 시 오래된 async 렌더가 최신을 덮어쓰지 않게 하는 토큰
+  let feedListEl = null;
+  let feedStatusEl = null;
+
+  function renderCategoryTabs() {
+    const present = new Set(currentSections.map(({ topic }) => topic.category).filter(Boolean));
+    if (!present.size) {
+      categoryTabsEl.innerHTML = "";
+      return;
+    }
+
+    const categories = ["전체", ...CATEGORY_ORDER.filter((c) => present.has(c))];
+    categoryTabsEl.innerHTML = categories.map((category) => `
+      <button class="category-tab${category === activeCategory ? " active" : ""}" type="button" data-category="${escapeHtml(category)}"${category === activeCategory ? ' aria-current="true"' : ""}>${escapeHtml(category)}</button>
+    `).join("");
+
+    categoryTabsEl.querySelectorAll(".category-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.category === activeCategory) return;
+        activeCategory = btn.dataset.category;
+        renderCategoryTabs();
+        renderFilteredFeed();
+      });
+    });
+  }
+
+  // 기사가 딱 1개뿐인 주제는 "비교"라는 취지에 안 맞고, 섹션 하나씩 차지하면 공간을
+  // 낭비하므로, 제목 없이 한데 모아 카드 그리드로만(여러 줄로 흐르게) 표시합니다.
   function renderFilteredFeed() {
+    if (!feedListEl) return;
+
     const filtered = activeCategory === "전체"
       ? currentSections
       : currentSections.filter(({ topic }) => topic.category === activeCategory);
 
     const headed = filtered.filter(({ articles }) => articles.length !== 1);
-    const singles = filtered.filter(({ articles }) => articles.length === 1)
+    const singles = filtered
+      .filter(({ articles }) => articles.length === 1)
       .sort((a, b) => (b.topic.updatedAt || 0) - (a.topic.updatedAt || 0));
 
     const ordered = clusterRelatedTopics(headed);
 
-    const feedListEl = document.getElementById("feedList");
-    const statusEl = document.getElementById("feedStatus");
-    if (statusEl) {
-      statusEl.textContent = activeCategory === "전체"
+    if (feedStatusEl) {
+      feedStatusEl.textContent = activeCategory === "전체"
         ? `최근 이슈 ${filtered.length}건`
         : `${activeCategory} 이슈 ${filtered.length}건`;
     }
-    if (!feedListEl) return;
 
-    feedListEl.innerHTML = "";
+    const fragment = document.createDocumentFragment();
     ordered.forEach(({ topic, articles, isClustered }, index) => {
-      feedListEl.appendChild(renderTopicSection(topic, articles, index * 90, isClustered));
+      fragment.appendChild(renderTopicSection(topic, articles, staggerDelay(index, SECTION_STAGGER_MS), isClustered));
     });
 
     if (singles.length) {
       const poolEl = document.createElement("section");
       poolEl.className = "topic-section";
-      poolEl.style.animationDelay = `${ordered.length * 90}ms`;
-
-      const gridEl = document.createElement("div");
-      gridEl.className = "article-grid";
-      singles.forEach(({ topic, articles }, index) => {
-        const { article, analysis } = articles[0];
-        gridEl.appendChild(createArticleCard(article, analysis, index * 60, topic.topic));
-      });
-      poolEl.appendChild(gridEl);
-      feedListEl.appendChild(poolEl);
+      poolEl.style.animationDelay = `${staggerDelay(ordered.length, SECTION_STAGGER_MS)}ms`;
+      poolEl.appendChild(buildArticleGrid(singles.map(({ topic, articles }) => ({
+        article: articles[0].article,
+        analysis: articles[0].analysis,
+        topicLabel: topic.topic
+      }))));
+      fragment.appendChild(poolEl);
     }
+
+    feedListEl.replaceChildren(fragment);
   }
 
   async function renderFeed(topics) {
+    const gen = ++renderGeneration;
+
     if (!topics.length) {
+      currentSections = [];
+      feedListEl = null;
+      feedStatusEl = null;
       categoryTabsEl.innerHTML = "";
-      appEl.innerHTML = "";
       renderNotice("표시할 이슈가 없습니다", "아직 분석된 기사가 쌓이지 않았습니다.");
       return;
     }
 
+    // 스캐폴드를 먼저 세워 로딩 흔적을 지웁니다.
     appEl.innerHTML = `
       <p class="status-line" id="feedStatus">최근 이슈 ${topics.length}건</p>
       <div class="legend"><span class="swatch"></span>기사 테두리 색: 오른쪽 위 = 신뢰도, 왼쪽 아래 = 어그로도 (빨강 낮음 · 초록 높음)</div>
       <div id="feedList"></div>
     `;
+    feedStatusEl = document.getElementById("feedStatus");
+    feedListEl = document.getElementById("feedList");
 
-    currentSections = await Promise.all(
-      topics.map(async (topic) => {
-        const articles = await loadTopicArticles(topic);
-        return { topic, articles };
-      })
+    const sections = await Promise.all(
+      topics.map(async (topic) => ({ topic, articles: await loadTopicArticles(topic) }))
     );
-    if (!CATEGORY_ORDER.includes(activeCategory) && activeCategory !== "전체") {
-      activeCategory = "전체"; // 활성 탭이 새 목록에 더 이상 없으면 전체로 되돌림
+
+    // 이 렌더가 진행되는 사이 더 새로운 스냅샷이 도착했으면 이 결과는 버립니다.
+    if (gen !== renderGeneration) return;
+
+    currentSections = sections;
+    if (activeCategory !== "전체" && !CATEGORY_ORDER.includes(activeCategory)) {
+      activeCategory = "전체";
     }
 
     renderCategoryTabs();
     renderFilteredFeed();
   }
 
-  const topicsQuery = query(collection(db, "topics"), orderBy("updatedAt", "desc"), limit(30));
+  // ═══════════════════════════════════════════════════════════════
+  // 부트스트랩 — topics를 최신순으로 실시간 구독
+  // ═══════════════════════════════════════════════════════════════
+
   renderSkeleton();
   onSnapshot(
-    topicsQuery,
+    query(collection(db, "topics"), orderBy("updatedAt", "desc"), limit(TOPIC_FETCH_LIMIT)),
     (snapshot) => {
       const topics = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-      renderFeed(topics);
+      renderFeed(topics).catch(() => {
+        renderNotice("이슈를 표시하는 중 문제가 발생했습니다", "잠시 후 다시 시도해주세요.");
+      });
     },
     () => {
       renderNotice("이슈 목록을 불러오지 못했습니다", "잠시 후 다시 시도해주세요.");
