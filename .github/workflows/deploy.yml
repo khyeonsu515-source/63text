@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject NewsAPI key
+      - name: Inject GNews API key
         run: |
           mkdir -p dist
           cp index.html dist/index.html
