@@ -279,6 +279,62 @@
     background: var(--border);
     font-size: 12px;
   }
+
+  /* ---------- Topic groups ---------- */
+  .group {
+    grid-column: 1 / -1;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .group-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .group-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .group-header span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .group-members {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    padding: 16px 20px 20px;
+  }
+
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .badge-credibility { background: rgba(59,130,246,0.14); color: var(--accent-b); }
+  .badge-clickbait { background: rgba(239,68,68,0.14); color: #dc2626; }
+  .badge-stance { background: rgba(100,116,139,0.14); color: var(--muted); }
 </style>
 </head>
 <body>
@@ -317,6 +373,13 @@
   const NEWS_API_BASE = "https://gnews.io/api/v4";
   const NEWS_LANG = "ko";
   const NEWS_COUNTRY = "kr";
+
+  // Intone 확장 프로그램이 신뢰도/어그로도 분석을 쌓아두는 공유 Firestore.
+  // Web API Key는 클라이언트 공개용이며, 접근 제어는 Firestore 보안 규칙이 담당합니다.
+  const FIRESTORE_PROJECT_ID = "intone-analysis";
+  const FIRESTORE_API_KEY = "AIzaSyBQT-UNNgB5Ujlkw_RFsPNsfKfj0jIXQnY";
+  const FIRESTORE_COLLECTION = "analysisResults";
+  const GROUP_OVERLAP_RATIO = 0.5;
 
   const CATEGORIES = [
     { id: "general", label: "전체" },
@@ -424,7 +487,156 @@
       .replace(/"/g, "&quot;");
   }
 
-  function renderArticles(articles) {
+  // ─────────────────────────────────────────────
+  // Firestore(analysisResults) 조회 — Intone 확장이 쌓아둔 신뢰도/키워드 분석
+  // ─────────────────────────────────────────────
+  async function sha256Hex(text) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  function stripUrlFragment(url) {
+    try {
+      const parsed = new URL(url);
+      parsed.hash = "";
+      return parsed.toString();
+    } catch (error) {
+      return url;
+    }
+  }
+
+  function decodeFirestoreValue(value) {
+    if (!value || typeof value !== "object") return null;
+    if ("stringValue" in value) return value.stringValue;
+    if ("integerValue" in value) return Number(value.integerValue);
+    if ("doubleValue" in value) return Number(value.doubleValue);
+    if ("booleanValue" in value) return Boolean(value.booleanValue);
+    if ("nullValue" in value) return null;
+    if ("mapValue" in value) return firestoreFieldsToObject(value.mapValue?.fields);
+    if ("arrayValue" in value) return (value.arrayValue?.values || []).map(decodeFirestoreValue);
+    return null;
+  }
+
+  function firestoreFieldsToObject(fields) {
+    const obj = {};
+    for (const [key, value] of Object.entries(fields || {})) {
+      obj[key] = decodeFirestoreValue(value);
+    }
+    return obj;
+  }
+
+  // 기사 URL 배열을 받아 { url: analysisRecord } 형태의 Map을 돌려줍니다.
+  // 분석 기록이 없는 URL은 결과에서 빠집니다(신뢰도 뱃지/그룹핑 대상에서 제외).
+  async function fetchAnalysisMap(urls) {
+    const map = new Map();
+    if (!urls.length) return map;
+
+    const docIds = await Promise.all(urls.map((url) => sha256Hex(stripUrlFragment(url))));
+    const endpoint = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT_ID}/databases/(default)/documents:batchGet?key=${FIRESTORE_API_KEY}`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documents: docIds.map(
+            (docId) => `projects/${FIRESTORE_PROJECT_ID}/databases/(default)/documents/${FIRESTORE_COLLECTION}/${docId}`
+          )
+        })
+      });
+      if (!response.ok) return map;
+
+      const results = await response.json();
+      results.forEach((result, index) => {
+        if (!result.found) return;
+        const record = firestoreFieldsToObject(result.found.fields);
+        if (record && Array.isArray(record.core_keywords) && record.core_keywords.length) {
+          map.set(urls[index], record);
+        }
+      });
+    } catch (error) {
+      // Firebase 조회 실패는 조용히 무시 — 뉴스 목록 자체는 계속 보여줘야 합니다.
+    }
+
+    return map;
+  }
+
+  // core_keywords 겹침이 50% 이상인 기존 그룹이 있으면 합류시키고,
+  // 없으면 새 그룹을 만듭니다 (그룹 키워드는 합류할 때마다 합집합으로 확장).
+  function clusterByKeywords(analyzedArticles) {
+    const groups = [];
+
+    analyzedArticles.forEach(({ article, analysis }) => {
+      const keywords = analysis.core_keywords;
+      let bestGroup = null;
+      let bestOverlap = 0;
+
+      groups.forEach((group) => {
+        const overlap = keywords.filter((keyword) => group.keywordSet.has(keyword)).length;
+        const ratio = overlap / keywords.length;
+        if (ratio >= GROUP_OVERLAP_RATIO && overlap > bestOverlap) {
+          bestGroup = group;
+          bestOverlap = overlap;
+        }
+      });
+
+      if (bestGroup) {
+        keywords.forEach((keyword) => bestGroup.keywordSet.add(keyword));
+        bestGroup.items.push({ article, analysis });
+      } else {
+        groups.push({
+          topic: analysis.topic || article.title,
+          keywordSet: new Set(keywords),
+          items: [{ article, analysis }]
+        });
+      }
+    });
+
+    return groups;
+  }
+
+  function analysisBadges(analysis) {
+    if (!analysis) return "";
+    const stance = analysis.direction?.stance;
+    return `
+      <div class="badge-row">
+        <span class="badge badge-credibility">신뢰도 ${analysis.credibility_score}</span>
+        <span class="badge badge-clickbait">어그로도 ${analysis.clickbait_score}</span>
+        ${stance ? `<span class="badge badge-stance">${escapeHtml(stance)}</span>` : ""}
+      </div>
+    `;
+  }
+
+  function createArticleCard(article, analysis) {
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = article.url || "#";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+
+    const thumbInner = article.image
+      ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML = '${PLACEHOLDER_ICON.replace(/'/g, "\\'")}';">`
+      : PLACEHOLDER_ICON;
+
+    a.innerHTML = `
+      <div class="thumb">${thumbInner}</div>
+      <div class="body">
+        <div class="source-row">
+          <span>${escapeHtml(article.source?.name || "출처 미상")}</span>
+          <time>${timeAgo(article.publishedAt)}</time>
+        </div>
+        <h3>${escapeHtml(article.title || "제목 없음")}</h3>
+        <p>${escapeHtml(article.description || "")}</p>
+        ${analysisBadges(analysis)}
+        <span class="read-more">기사 보기 →</span>
+      </div>
+    `;
+    return a;
+  }
+
+  function renderArticles(articles, analysisMap) {
     gridEl.innerHTML = "";
 
     if (!articles.length) {
@@ -432,30 +644,43 @@
       return;
     }
 
+    const analyzed = [];
+    const singles = [];
     articles.forEach((article) => {
-      const a = document.createElement("a");
-      a.className = "card";
-      a.href = article.url || "#";
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
+      const analysis = analysisMap.get(article.url);
+      if (analysis) {
+        analyzed.push({ article, analysis });
+      } else {
+        singles.push(article);
+      }
+    });
 
-      const thumbInner = article.image
-        ? `<img src="${escapeHtml(article.image)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML = '${PLACEHOLDER_ICON.replace(/'/g, "\\'")}';">`
-        : PLACEHOLDER_ICON;
+    const groups = clusterByKeywords(analyzed);
 
-      a.innerHTML = `
-        <div class="thumb">${thumbInner}</div>
-        <div class="body">
-          <div class="source-row">
-            <span>${escapeHtml(article.source?.name || "출처 미상")}</span>
-            <time>${timeAgo(article.publishedAt)}</time>
-          </div>
-          <h3>${escapeHtml(article.title || "제목 없음")}</h3>
-          <p>${escapeHtml(article.description || "")}</p>
-          <span class="read-more">기사 보기 →</span>
+    groups.forEach((group) => {
+      if (group.items.length < 2) {
+        singles.push(group.items[0].article);
+        return;
+      }
+
+      const groupEl = document.createElement("div");
+      groupEl.className = "group";
+      groupEl.innerHTML = `
+        <div class="group-header">
+          <h2>${escapeHtml(group.topic)}</h2>
+          <span>${group.items.length}개 매체 보도</span>
         </div>
+        <div class="group-members"></div>
       `;
-      gridEl.appendChild(a);
+      const membersEl = groupEl.querySelector(".group-members");
+      group.items.forEach(({ article, analysis }) => {
+        membersEl.appendChild(createArticleCard(article, analysis));
+      });
+      gridEl.appendChild(groupEl);
+    });
+
+    singles.forEach((article) => {
+      gridEl.appendChild(createArticleCard(article, analysisMap.get(article.url)));
     });
   }
 
@@ -490,7 +715,10 @@
       statusEl.textContent = activeQuery
         ? `"${activeQuery}" 검색 결과 ${articles.length}건`
         : `${CATEGORIES.find((c) => c.id === activeCategory)?.label || ""} 뉴스 ${articles.length}건`;
-      renderArticles(articles);
+
+      const analysisMap = await fetchAnalysisMap(articles.map((item) => item.url).filter(Boolean));
+      if (myToken !== requestToken) return;
+      renderArticles(articles, analysisMap);
     } catch (error) {
       if (myToken !== requestToken) return;
       statusEl.textContent = "";
