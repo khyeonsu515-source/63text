@@ -23,11 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject GNews API key
+      - name: Prepare dist
         run: |
           mkdir -p dist
           cp index.html dist/index.html
-          sed -i "s/__NEWS_API_KEY__/${{ secrets.NEWS_API_KEY }}/g" dist/index.html
 
       - uses: actions/configure-pages@v5
 
