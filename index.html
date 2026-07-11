@@ -379,14 +379,15 @@
     year: "numeric", month: "long", day: "numeric", weekday: "long"
   });
 
+  // 부정 ~ 긍정 단일 스펙트럼. 순서가 곧 스펙트럼 위치를 나타냅니다.
   const STANCE_COLORS = {
-    "비판적": "#b3261a",
-    "옹호적": "#1d4f91",
-    "긍정적": "#a15c00",
-    "부정적": "#a15c00",
-    "중립적": "#6d6552"
+    "매우 부정적": "#b3261a",
+    "약간 부정적": "#c97a54",
+    "중립적": "#6d6552",
+    "약간 긍정적": "#4a7fa8",
+    "매우 긍정적": "#1d4f91"
   };
-  const STANCE_ORDER = ["비판적", "옹호적", "긍정적", "부정적", "중립적"];
+  const STANCE_ORDER = ["매우 부정적", "약간 부정적", "중립적", "약간 긍정적", "매우 긍정적"];
 
   const PLACEHOLDER_ICON = `
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
