@@ -384,14 +384,28 @@
     letter-spacing: 0.06em;
   }
 
-  .article-summary {
+  .article-headline {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .article-title {
     margin: 0;
     font-size: 15.5px;
-    font-weight: 600;
-    line-height: 1.45;
+    font-weight: 700;
+    line-height: 1.4;
     letter-spacing: -0.01em;
     color: var(--text);
-    flex: 1;
+  }
+
+  .article-dek {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--muted);
   }
 
   .stance-badge {
@@ -587,6 +601,15 @@
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
       : "";
 
+    // 실제 기사 제목이 있으면 그걸 메인 헤드라인으로 보여주고, AI 한 줄 요약은
+    // 그 아래 작은 보조 설명으로 덧붙입니다. article_title이 생기기 전에
+    // 분석된 옛날 기사는 요약을 대신 메인으로 보여줍니다.
+    const hasTitle = Boolean(analysis.article_title);
+    const headlineText = hasTitle ? analysis.article_title : (analysis.article_summary || "");
+    const dek = hasTitle && analysis.article_summary
+      ? `<p class="article-dek">${escapeHtml(analysis.article_summary)}</p>`
+      : "";
+
     // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 같은 두 색으로
     // 호버 시 은은한 이중 톤 글로우도 같이 만듭니다(테두리는 진하게, 글로우는 옅게).
     const credibilityHue = scoreHue(analysis.credibility_score, false);
@@ -610,7 +633,10 @@
         <div class="body">
           ${topicKicker}
           <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
-          <p class="article-summary">${escapeHtml(analysis.article_summary || "")}</p>
+          <div class="article-headline">
+            <h3 class="article-title">${escapeHtml(headlineText)}</h3>
+            ${dek}
+          </div>
           ${stanceBadge}
           ${reason}
           <a class="article-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>
