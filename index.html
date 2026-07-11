@@ -320,10 +320,14 @@
     position: relative;
     z-index: 1;
     grid-column: span 1;
-    padding: 2px;
-    border-radius: calc(var(--radius-lg) + 2px);
+    padding: 3px;
+    border-radius: calc(var(--radius-lg) + 3px);
     transition: transform 320ms var(--ease), box-shadow 320ms var(--ease);
     animation: riseIn 520ms var(--ease) both;
+    /* 평상시에도 신뢰도/어그로도 색이 옅게 은은히 비치는 앰비언트 글로우 */
+    box-shadow:
+      -6px 8px 20px -14px var(--glow-a, transparent),
+      6px -8px 20px -14px var(--glow-b, transparent);
   }
 
   .article-card-border:hover {
@@ -331,8 +335,8 @@
     z-index: 20;
     transform: translateY(-6px);
     box-shadow:
-      -10px 12px 30px -12px var(--glow-a, transparent),
-      10px -10px 30px -12px var(--glow-b, transparent);
+      -14px 16px 38px -12px var(--glow-a, transparent),
+      14px -14px 38px -12px var(--glow-b, transparent);
   }
 
   .article-card {
@@ -342,6 +346,7 @@
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    cursor: pointer;
   }
 
   .article-card .thumb {
@@ -469,8 +474,14 @@
 
   .breakdown-fill {
     height: 100%;
+    width: 0;
     border-radius: 999px;
     background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 560ms var(--ease) 120ms;
+  }
+
+  .article-card-border:hover .breakdown-fill {
+    width: var(--target-width);
   }
 
   .breakdown-value {
@@ -585,7 +596,7 @@
       return `
         <div class="breakdown-row">
           <span class="breakdown-label">${escapeHtml(label)}</span>
-          <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%"></div></div>
+          <div class="breakdown-track"><div class="breakdown-fill" style="--target-width:${pct}%"></div></div>
           <span class="breakdown-value">${value}/${max}</span>
         </div>
       `;
@@ -642,12 +653,47 @@
     return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // 0~100 점수를 빨강(나쁨)~초록(좋음) 축의 색상환 위치(hue)로 변환. invert가
-  // true면 점수가 높을수록 나쁜 지표(어그로도)에 맞게 축을 뒤집습니다.
-  function scoreHue(score, invert) {
+  // 0~100 점수를 빨강(나쁨)~주황~노랑~초록(좋음)의 다단계 색상으로 변환합니다.
+  // hue만 회전시키면 중간 구간(초록/빨강 사이)이 탁한 올리브색으로 뭉개져서
+  // 점수 차이가 잘 대비되어 보이지 않기 때문에, 뚜렷이 구분되는 색 정지점들
+  // 사이를 RGB로 보간합니다 — 신호등 색처럼 한눈에 좋고 나쁨이 대비됩니다.
+  const SCORE_COLOR_STOPS = [
+    { at: 0,   rgb: [220, 38, 38] },   // 빨강 (나쁨)
+    { at: 33,  rgb: [249, 115, 22] },  // 주황
+    { at: 66,  rgb: [234, 179, 8] },   // 노랑
+    { at: 100, rgb: [22, 197, 94] }    // 초록 (좋음)
+  ];
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function scoreToRgb(goodness) {
+    const clamped = Math.max(0, Math.min(100, goodness));
+    for (let i = 0; i < SCORE_COLOR_STOPS.length - 1; i += 1) {
+      const cur = SCORE_COLOR_STOPS[i];
+      const next = SCORE_COLOR_STOPS[i + 1];
+      if (clamped >= cur.at && clamped <= next.at) {
+        const t = (clamped - cur.at) / (next.at - cur.at);
+        return cur.rgb.map((channel, index) => Math.round(lerp(channel, next.rgb[index], t)));
+      }
+    }
+    return SCORE_COLOR_STOPS[SCORE_COLOR_STOPS.length - 1].rgb;
+  }
+
+  // invert가 true면 점수가 높을수록 나쁜 지표(어그로도)에 맞게 축을 뒤집습니다.
+  function scoreToRgbColor(score, invert) {
     const clamped = Math.max(0, Math.min(100, Number(score) || 0));
     const goodness = invert ? 100 - clamped : clamped;
-    return (goodness / 100) * 120;
+    return scoreToRgb(goodness);
+  }
+
+  function rgbToCss([r, g, b], alpha) {
+    return alpha === undefined ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function lightenRgb([r, g, b], amount) {
+    return [r, g, b].map((c) => Math.round(c + (255 - c) * amount));
   }
 
   function renderNotice(title, detail) {
@@ -720,14 +766,15 @@
       ? `<p class="article-dek">${escapeHtml(analysis.article_summary)}</p>`
       : "";
 
-    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 같은 두 색으로
-    // 호버 시 은은한 이중 톤 글로우도 같이 만듭니다(테두리는 진하게, 글로우는 옅게).
-    const credibilityHue = scoreHue(analysis.credibility_score, false);
-    const clickbaitHue = scoreHue(analysis.clickbait_score, true);
-    const credibilityColor = `hsl(${credibilityHue}, 72%, 45%)`;
-    const clickbaitColor = `hsl(${clickbaitHue}, 72%, 45%)`;
-    const credibilityGlow = `hsla(${credibilityHue}, 85%, 60%, 0.45)`;
-    const clickbaitGlow = `hsla(${clickbaitHue}, 85%, 60%, 0.45)`;
+    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 신호등 색(빨강~
+    // 주황~노랑~초록)으로 또렷하게 대비시키고, 같은 두 색을 옅게 밝혀서
+    // 은은한 글로우(평상시엔 살짝, 호버 시엔 진하게)도 같이 만듭니다.
+    const credibilityRgb = scoreToRgbColor(analysis.credibility_score, false);
+    const clickbaitRgb = scoreToRgbColor(analysis.clickbait_score, true);
+    const credibilityColor = rgbToCss(credibilityRgb);
+    const clickbaitColor = rgbToCss(clickbaitRgb);
+    const credibilityGlow = rgbToCss(lightenRgb(credibilityRgb, 0.15), 0.55);
+    const clickbaitGlow = rgbToCss(lightenRgb(clickbaitRgb, 0.15), 0.55);
 
     const wrapper = document.createElement("div");
     wrapper.className = "article-card-border";
@@ -760,6 +807,17 @@
       const thumbEl = wrapper.querySelector(".thumb");
       thumbImg.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
     }
+
+    // "원문 보기" 버튼을 안 눌러도 카드 어디를 클릭하든 기사로 이동합니다.
+    // 다만 "이 관점으로 본 이유" 펼치기나 실제 링크 자체를 클릭한 경우는
+    // 그 요소의 원래 동작(펼치기/새 탭 열기)만 일어나야 하므로 건너뜁니다.
+    const cardEl = wrapper.querySelector(".article-card");
+    cardEl.addEventListener("click", (event) => {
+      if (event.target.closest("a") || event.target.closest("details")) {
+        return;
+      }
+      window.open(article.url, "_blank", "noopener,noreferrer");
+    });
 
     return wrapper;
   }
