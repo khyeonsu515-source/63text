@@ -378,30 +378,6 @@
     appEl.innerHTML = `<p class="status-line">불러오는 중...</p><div class="article-grid">${items}</div>`;
   }
 
-  // 기사 원문 페이지에서 og:image를 직접 fetch해 썸네일로 씁니다.
-  // 대부분의 언론사는 CORS를 열어두지 않아 실패할 수 있으며, 실패 시 조용히
-  // 플레이스홀더 아이콘을 유지합니다.
-  async function loadThumbInto(url, thumbEl) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return;
-      const html = await response.text();
-      const match =
-        html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-        html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-      if (!match) return;
-      const img = document.createElement("img");
-      img.src = match[1];
-      img.alt = "";
-      img.loading = "lazy";
-      img.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
-      thumbEl.innerHTML = "";
-      thumbEl.appendChild(img);
-    } catch (error) {
-      // 이미지 fetch 실패는 조용히 무시 — 플레이스홀더 아이콘을 유지합니다.
-    }
-  }
-
   function stanceSummary(articles) {
     const counts = new Map();
     articles.forEach(({ analysis }) => {
@@ -440,7 +416,9 @@
     wrapper.style = borderStyle;
     wrapper.innerHTML = `
       <div class="article-card">
-        <div class="thumb">${PLACEHOLDER_ICON}</div>
+        <div class="thumb">
+          ${analysis.image_url ? `<img src="${escapeHtml(analysis.image_url)}" alt="" loading="lazy">` : PLACEHOLDER_ICON}
+        </div>
         <div class="body">
           <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
           <p class="article-summary">${escapeHtml(analysis.article_summary || "")}</p>
@@ -451,8 +429,11 @@
       </div>
     `;
 
-    const thumbEl = wrapper.querySelector(".thumb");
-    loadThumbInto(article.url, thumbEl);
+    const thumbImg = wrapper.querySelector(".thumb img");
+    if (thumbImg) {
+      const thumbEl = wrapper.querySelector(".thumb");
+      thumbImg.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
+    }
 
     return wrapper;
   }
