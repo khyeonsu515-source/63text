@@ -6,35 +6,38 @@
 <title>intone news</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #efe9d8;
-    --card: #faf7ee;
-    --text: #1b1811;
-    --muted: #6d6552;
-    --border: #1b1811;
-    --border-soft: #d3c9ab;
-    --accent-a: #8a2116;
-    --accent-b: #1b1811;
-    --shadow: 5px 5px 0 rgba(27, 24, 17, 0.9);
-    --shadow-sm: 3px 3px 0 rgba(27, 24, 17, 0.85);
-    --serif: "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Noto Sans KR", sans-serif;
+    --bg: #f7f7f9;
+    --bg-translucent: rgba(247, 247, 249, 0.78);
+    --card: #ffffff;
+    --text: #14151a;
+    --muted: #6b7280;
+    --border: #e7e7ec;
+    --accent: #6d5ef8;
+    --accent-2: #ff6b4a;
+    --accent-soft: rgba(109, 94, 248, 0.12);
+    --shadow-sm: 0 1px 2px rgba(20, 21, 26, 0.05);
+    --track: #eef0f4;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Noto Sans KR", sans-serif;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --radius-lg: 20px;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #161310;
-      --card: #201c15;
-      --text: #ece5d3;
-      --muted: #a89d84;
-      --border: #ece5d3;
-      --border-soft: #3d3627;
-      --accent-a: #d9694f;
-      --accent-b: #ece5d3;
-      --shadow: 5px 5px 0 rgba(0, 0, 0, 0.7);
-      --shadow-sm: 3px 3px 0 rgba(0, 0, 0, 0.7);
+      --bg: #0a0a0d;
+      --bg-translucent: rgba(10, 10, 13, 0.78);
+      --card: #17181f;
+      --text: #f2f2f5;
+      --muted: #969ab0;
+      --border: #24252f;
+      --accent: #8f84ff;
+      --accent-2: #ff8464;
+      --accent-soft: rgba(143, 132, 255, 0.16);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --track: #1e1f28;
     }
   }
 
@@ -42,131 +45,141 @@
 
   body {
     margin: 0;
-    background-color: var(--bg);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-blend-mode: overlay;
-    background-size: 140px 140px;
+    min-height: 100vh;
+    background:
+      radial-gradient(640px circle at 6% -12%, var(--accent-soft), transparent 60%),
+      radial-gradient(520px circle at 100% 0%, rgba(255, 107, 74, 0.08), transparent 55%),
+      var(--bg);
     color: var(--text);
     font-family: var(--sans);
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ---------- Masthead ---------- */
+  /* ---------- Header ---------- */
   header {
     position: sticky;
     top: 0;
-    z-index: 10;
-    padding: 18px 28px 14px;
-    background: var(--bg);
-    border-bottom: 5px double var(--border);
+    z-index: 20;
+    padding: 16px 28px;
+    background: var(--bg-translucent);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid var(--border);
   }
 
   .masthead {
     max-width: 1180px;
     margin: 0 auto;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
   }
 
   .brand {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    align-items: center;
+    gap: 9px;
     text-decoration: none;
     color: inherit;
   }
 
+  .brand .logo-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 14px var(--accent);
+    flex: 0 0 auto;
+  }
+
   .brand .wordmark {
-    font-family: var(--serif);
-    font-size: 34px;
-    font-weight: 900;
-    letter-spacing: -0.01em;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     color: var(--text);
   }
 
   .brand .tagline {
-    font-size: 11.5px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    margin-left: 2px;
   }
 
-  .masthead .edition-date {
+  .edition-date {
     font-size: 12.5px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--muted);
-    letter-spacing: 0.04em;
   }
 
   /* ---------- Category tabs ---------- */
   .category-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 28px;
+    gap: 6px;
+    padding: 16px 28px 4px;
     max-width: 1180px;
     margin: 0 auto;
-    border-bottom: 1.5px solid var(--border-soft);
   }
 
   .category-tab {
-    padding: 6px 14px;
-    border: 1.5px solid var(--border);
-    background: transparent;
-    color: var(--text);
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
     font-family: var(--sans);
     font-size: 12.5px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 140ms ease, color 140ms ease;
+    transition: all 200ms var(--ease);
   }
 
-  .category-tab:hover { background: var(--border-soft); }
+  .category-tab:hover { border-color: var(--accent); color: var(--text); }
 
   .category-tab.active {
-    background: var(--text);
-    color: var(--card);
-    border-color: var(--text);
+    background: linear-gradient(135deg, var(--accent), #8f6bff);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px -6px var(--accent);
   }
 
   main {
-    padding: 24px 28px 60px;
+    padding: 20px 28px 64px;
     max-width: 1180px;
     margin: 0 auto;
   }
 
   .status-line {
-    padding: 4px 2px 18px;
+    padding: 4px 2px 16px;
     color: var(--muted);
-    font-size: 12.5px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
   }
 
   .legend {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
-    margin-bottom: 26px;
+    padding: 9px 16px;
+    margin-bottom: 32px;
     background: var(--card);
-    border: 1.5px solid var(--border-soft);
-    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    box-shadow: var(--shadow-sm);
+    font-size: 12.5px;
     color: var(--muted);
-    font-weight: 600;
+    font-weight: 500;
+    width: fit-content;
   }
 
   .legend .swatch {
-    width: 14px;
-    height: 14px;
-    background: linear-gradient(45deg, #b3261a, #1e7d32);
-    border: 1.5px solid var(--border);
+    width: 16px;
+    height: 16px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #ef4444, #22c55e);
     flex: 0 0 auto;
   }
 
@@ -176,20 +189,22 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 60px 20px;
+    padding: 64px 20px;
     text-align: center;
     color: var(--muted);
-    border: 1.5px dashed var(--border-soft);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
   }
 
-  .notice strong { color: var(--text); font-size: 17px; font-family: var(--serif); }
+  .notice strong { color: var(--text); font-size: 17px; font-weight: 800; }
 
   .skeleton {
-    background: linear-gradient(90deg, var(--border-soft) 25%, rgba(255,255,255,0.4) 37%, var(--border-soft) 63%);
+    background: linear-gradient(90deg, var(--track) 25%, var(--border) 37%, var(--track) 63%);
     background-size: 400% 100%;
     animation: shimmer 1.4s ease infinite;
-    height: 240px;
-    border: 1.5px solid var(--border-soft);
+    height: 260px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
   }
 
   @keyframes shimmer {
@@ -199,126 +214,138 @@
 
   /* ---------- Entrance animation ---------- */
   @keyframes riseIn {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(18px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   /* ---------- Topic feed ---------- */
   .topic-section {
-    margin-bottom: 40px;
-    padding-top: 16px;
-    border-top: 5px double var(--border);
-    animation: riseIn 500ms ease both;
+    margin-bottom: 48px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    animation: riseIn 520ms var(--ease) both;
+  }
+
+  .topic-section:first-child {
+    border-top: none;
+    padding-top: 0;
   }
 
   /* 키워드가 겹쳐 같은 묶음으로 판단된, 바로 앞 주제와 이어지는 두 번째 이후 항목.
-     구분선을 얇게 해서 시각적으로 더 가깝게(연관 있게) 보이도록 합니다. */
+     구분선 없이 간격만 좁혀서 시각적으로 더 가깝게(연관 있게) 보이도록 합니다. */
   .topic-section.clustered {
-    border-top: 2px solid var(--border-soft);
-    padding-top: 14px;
-    margin-bottom: 28px;
+    border-top: none;
+    padding-top: 0;
+    margin-top: -24px;
+    margin-bottom: 40px;
   }
 
   .related-tag {
     display: block;
-    font-size: 10.5px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 2px;
   }
 
   .topic-header {
     display: flex;
-    align-items: baseline;
-    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 18px;
   }
 
   .topic-title-block {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
   }
 
   .topic-category {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 3px 11px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
     font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--accent-a);
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 
   .topic-header h2 {
     margin: 0;
-    font-family: var(--serif);
-    font-size: 24px;
-    font-weight: 900;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
+    font-size: 27px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
   }
 
   .topic-header .topic-meta {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 12.5px;
+    font-weight: 500;
     color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    white-space: nowrap;
+    margin-top: 6px;
   }
 
   .stance-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 16px;
+    gap: 8px;
+    margin-bottom: 20px;
   }
 
   .stance-chip {
-    padding: 3px 10px;
-    border: 1.5px solid currentColor;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
   }
 
   .article-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 22px;
   }
 
   /* Diagonal gradient "border": credibility color meets the top-right edge,
-     clickbait color meets the bottom-left edge, blending across the middle. */
+     clickbait color meets the bottom-left edge, blending across the middle.
+     On hover the same two colors bloom into a soft dual-tone glow. */
   .article-card-border {
-    padding: 5px;
-    transition: transform 160ms ease, box-shadow 160ms ease;
-    animation: riseIn 480ms ease both;
+    padding: 2px;
+    border-radius: calc(var(--radius-lg) + 2px);
+    transition: transform 320ms var(--ease), box-shadow 320ms var(--ease);
+    animation: riseIn 520ms var(--ease) both;
   }
 
   .article-card-border:hover {
-    transform: translate(-3px, -3px);
-    box-shadow: var(--shadow);
+    transform: translateY(-6px);
+    box-shadow:
+      -10px 12px 30px -12px var(--glow-a, transparent),
+      10px -10px 30px -12px var(--glow-b, transparent);
   }
 
   .article-card {
     display: flex;
     flex-direction: column;
     background: var(--card);
-    border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     height: 100%;
+    box-shadow: var(--shadow-sm);
   }
 
   .article-card .thumb {
     width: 100%;
-    aspect-ratio: 4 / 3;
-    background: var(--border-soft);
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(135deg, var(--accent-soft), rgba(255, 107, 74, 0.1));
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border-bottom: 1.5px solid var(--border);
   }
 
   .article-card .thumb img {
@@ -326,82 +353,87 @@
     height: 100%;
     object-fit: cover;
     display: block;
-    filter: grayscale(88%) contrast(1.08) brightness(0.97);
-    transition: filter 380ms ease;
+    transition: transform 550ms var(--ease);
   }
 
   .article-card-border:hover .thumb img {
-    filter: grayscale(0%) contrast(1) brightness(1);
+    transform: scale(1.06);
   }
 
-  .article-card .thumb svg { opacity: 0.4; color: var(--muted); }
+  .article-card .thumb svg { opacity: 0.4; color: var(--accent); }
 
   .article-card .body {
-    padding: 14px 16px 16px;
+    padding: 18px 18px 20px;
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 10px;
     flex: 1;
   }
 
   .article-source {
-    font-size: 10.5px;
-    font-weight: 800;
-    color: var(--accent-a);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
   }
 
   .article-summary {
     margin: 0;
-    font-family: var(--serif);
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.4;
+    font-size: 15.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
     color: var(--text);
     flex: 1;
   }
 
   .stance-badge {
     align-self: flex-start;
-    padding: 3px 10px;
-    border: 1.5px solid currentColor;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
   }
 
   details.reason {
     font-size: 12.5px;
     color: var(--muted);
-    border-top: 1px solid var(--border-soft);
-    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
   }
 
   details.reason summary {
     cursor: pointer;
-    font-weight: 700;
-    color: var(--accent-a);
+    font-weight: 600;
+    color: var(--accent);
     list-style: none;
   }
   details.reason summary::-webkit-details-marker { display: none; }
-  details.reason p { margin: 6px 0 0; line-height: 1.5; color: var(--text); font-family: var(--sans); }
+  details.reason p { margin: 6px 0 0; line-height: 1.5; color: var(--text); }
 
   .article-link {
-    margin-top: 2px;
+    margin-top: 4px;
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
-    font-weight: 800;
+    font-size: 12.5px;
+    font-weight: 700;
     color: var(--text);
     text-decoration: none;
-    padding: 6px 12px;
-    border: 1.5px solid var(--border);
-    transition: background 140ms ease, color 140ms ease;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: all 200ms var(--ease);
   }
-  .article-link:hover { background: var(--text); color: var(--card); }
+  .article-link:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: translateX(2px);
+  }
 </style>
 </head>
 <body>
@@ -409,6 +441,7 @@
 <header>
   <div class="masthead">
     <a class="brand" href="/">
+      <span class="logo-dot"></span>
       <span class="wordmark">Intone</span>
       <span class="tagline">Cross-checked news</span>
     </a>
@@ -446,11 +479,11 @@
 
   // 부정 ~ 긍정 단일 스펙트럼. 순서가 곧 스펙트럼 위치를 나타냅니다.
   const STANCE_COLORS = {
-    "매우 부정적": "#b3261a",
-    "약간 부정적": "#c97a54",
-    "중립적": "#6d6552",
-    "약간 긍정적": "#4a7fa8",
-    "매우 긍정적": "#1d4f91"
+    "매우 부정적": { bg: "rgba(239, 68, 68, 0.14)", fg: "#dc2626" },
+    "약간 부정적": { bg: "rgba(249, 115, 22, 0.14)", fg: "#c2620a" },
+    "중립적":     { bg: "rgba(107, 114, 128, 0.14)", fg: "#6b7280" },
+    "약간 긍정적": { bg: "rgba(56, 145, 255, 0.14)",  fg: "#2563eb" },
+    "매우 긍정적": { bg: "rgba(99, 102, 241, 0.16)",  fg: "#4f46e5" }
   };
   const STANCE_ORDER = ["매우 부정적", "약간 부정적", "중립적", "약간 긍정적", "매우 긍정적"];
 
@@ -494,13 +527,12 @@
     return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  // 0~100 점수를 빨강(나쁨)~초록(좋음) 색상으로 변환. invert가 true면
-  // 점수가 높을수록 나쁜 지표(어그로도)에 맞게 축을 뒤집습니다.
-  function scoreToColor(score, invert) {
+  // 0~100 점수를 빨강(나쁨)~초록(좋음) 축의 색상환 위치(hue)로 변환. invert가
+  // true면 점수가 높을수록 나쁜 지표(어그로도)에 맞게 축을 뒤집습니다.
+  function scoreHue(score, invert) {
     const clamped = Math.max(0, Math.min(100, Number(score) || 0));
     const goodness = invert ? 100 - clamped : clamped;
-    const hue = (goodness / 100) * 120;
-    return `hsl(${hue}, 68%, 38%)`;
+    return (goodness / 100) * 120;
   }
 
   function renderNotice(title, detail) {
@@ -528,7 +560,7 @@
 
     const chips = STANCE_ORDER.filter((stance) => counts.has(stance)).map((stance) => {
       const color = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
-      return `<span class="stance-chip" style="color:${color}">${escapeHtml(stance)} ${counts.get(stance)}</span>`;
+      return `<span class="stance-chip" style="background:${color.bg};color:${color.fg}">${escapeHtml(stance)} ${counts.get(stance)}</span>`;
     }).join("");
 
     return `<div class="stance-summary">${chips}</div>`;
@@ -538,20 +570,26 @@
     const stance = analysis.direction?.stance;
     const stanceColor = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
     const stanceBadge = stance
-      ? `<span class="stance-badge" style="color:${stanceColor}">${escapeHtml(stance)}</span>`
+      ? `<span class="stance-badge" style="background:${stanceColor.bg};color:${stanceColor.fg}">${escapeHtml(stance)}</span>`
       : "";
     const reason = analysis.direction?.reason
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
       : "";
 
-    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 두 색이 다르면
-    // 그 사이가 자연스럽게 그라데이션으로 이어집니다.
-    const credibilityColor = scoreToColor(analysis.credibility_score, false);
-    const clickbaitColor = scoreToColor(analysis.clickbait_score, true);
+    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 같은 두 색으로
+    // 호버 시 은은한 이중 톤 글로우도 같이 만듭니다(테두리는 진하게, 글로우는 옅게).
+    const credibilityHue = scoreHue(analysis.credibility_score, false);
+    const clickbaitHue = scoreHue(analysis.clickbait_score, true);
+    const credibilityColor = `hsl(${credibilityHue}, 72%, 45%)`;
+    const clickbaitColor = `hsl(${clickbaitHue}, 72%, 45%)`;
+    const credibilityGlow = `hsla(${credibilityHue}, 85%, 60%, 0.45)`;
+    const clickbaitGlow = `hsla(${clickbaitHue}, 85%, 60%, 0.45)`;
 
     const wrapper = document.createElement("div");
     wrapper.className = "article-card-border";
     wrapper.style.background = `linear-gradient(45deg, ${clickbaitColor}, ${credibilityColor})`;
+    wrapper.style.setProperty("--glow-a", clickbaitGlow);
+    wrapper.style.setProperty("--glow-b", credibilityGlow);
     wrapper.style.animationDelay = `${delayMs}ms`;
     wrapper.innerHTML = `
       <div class="article-card">
