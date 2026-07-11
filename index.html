@@ -370,6 +370,12 @@
     flex: 1;
   }
 
+  .article-topic-kicker {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
   .article-source {
     font-size: 11px;
     font-weight: 700;
@@ -566,11 +572,16 @@
     return `<div class="stance-summary">${chips}</div>`;
   }
 
-  function createArticleCard(article, analysis, delayMs) {
+  function createArticleCard(article, analysis, delayMs, topicLabel) {
     const stance = analysis.direction?.stance;
     const stanceColor = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
     const stanceBadge = stance
       ? `<span class="stance-badge" style="background:${stanceColor.bg};color:${stanceColor.fg}">${escapeHtml(stance)}</span>`
+      : "";
+    // 주제 섹션 헤더 없이 단독으로 표시되는 카드(비교 대상이 없는 1개짜리
+    // 주제를 모아둔 영역)에서만 어떤 이슈인지 알 수 있도록 작게 표시합니다.
+    const topicKicker = topicLabel
+      ? `<span class="article-topic-kicker">${escapeHtml(topicLabel)}</span>`
       : "";
     const reason = analysis.direction?.reason
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
@@ -597,6 +608,7 @@
           ${analysis.image_url ? `<img src="${escapeHtml(analysis.image_url)}" alt="" loading="lazy">` : PLACEHOLDER_ICON}
         </div>
         <div class="body">
+          ${topicKicker}
           <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
           <p class="article-summary">${escapeHtml(analysis.article_summary || "")}</p>
           ${stanceBadge}
@@ -775,11 +787,20 @@
     return ordered;
   }
 
+  // 기사가 딱 1개뿐인 주제는 "비교"라는 사이트 취지에 안 맞고, 이런 주제가
+  // 많으면 한 줄(섹션)씩 차지하며 화면을 낭비합니다. 이런 주제들은 개별
+  // 섹션(제목)을 안 만들고 한데 모아 카드 그리드로만 표시합니다 — 그리드는
+  // 여러 줄로 자연스럽게 흐르므로 훨씬 촘촘하게 보여줄 수 있습니다.
   function renderFilteredFeed() {
     const filtered = activeCategory === "전체"
       ? currentSections
       : currentSections.filter(({ topic }) => topic.category === activeCategory);
-    const ordered = clusterRelatedTopics(filtered);
+
+    const headed = filtered.filter(({ articles }) => articles.length !== 1);
+    const singles = filtered.filter(({ articles }) => articles.length === 1)
+      .sort((a, b) => (b.topic.updatedAt || 0) - (a.topic.updatedAt || 0));
+
+    const ordered = clusterRelatedTopics(headed);
 
     const feedListEl = document.getElementById("feedList");
     const statusEl = document.getElementById("feedStatus");
@@ -794,6 +815,21 @@
     ordered.forEach(({ topic, articles, isClustered }, index) => {
       feedListEl.appendChild(renderTopicSection(topic, articles, index * 90, isClustered));
     });
+
+    if (singles.length) {
+      const poolEl = document.createElement("section");
+      poolEl.className = "topic-section";
+      poolEl.style.animationDelay = `${ordered.length * 90}ms`;
+
+      const gridEl = document.createElement("div");
+      gridEl.className = "article-grid";
+      singles.forEach(({ topic, articles }, index) => {
+        const { article, analysis } = articles[0];
+        gridEl.appendChild(createArticleCard(article, analysis, index * 60, topic.topic));
+      });
+      poolEl.appendChild(gridEl);
+      feedListEl.appendChild(poolEl);
+    }
   }
 
   async function renderFeed(topics) {
