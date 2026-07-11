@@ -536,29 +536,6 @@
   details.reason summary::-webkit-details-marker { display: none; }
   details.reason p { margin: 6px 0 0; line-height: 1.5; color: var(--text); }
 
-  .article-link {
-    margin-top: 4px;
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--text);
-    text-decoration: none;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    transition: background 200ms var(--ease), border-color 200ms var(--ease), color 200ms var(--ease), transform 200ms var(--ease);
-  }
-  .article-link:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    transform: translateX(2px);
-  }
-
   /* 모션에 민감한 사용자를 위해 애니메이션/전환을 비활성화합니다. */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -862,10 +839,6 @@
       ? `<p class="article-dek">${escapeHtml(analysis.article_summary)}</p>`
       : "";
 
-    const originLink = href
-      ? `<a class="article-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>`
-      : "";
-
     // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 신호등 색으로 또렷하게
     // 대비시키고, 같은 두 색을 옅게 밝혀 은은한 글로우(호버 시 진하게)도 만듭니다.
     const credibilityRgb = scoreToRgbColor(analysis.credibility_score, false);
@@ -892,7 +865,6 @@
           ${stanceBadge}
           ${detailPanel}
           ${reason}
-          ${originLink}
         </div>
       </div>
     `;
