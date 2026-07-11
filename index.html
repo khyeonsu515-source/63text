@@ -14,7 +14,6 @@
     --accent-a: #3b82f6;
     --accent-b: #4338ca;
     --shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-    --track: #eef0f4;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -25,7 +24,6 @@
       --muted: #94a3b8;
       --border: #232a3a;
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-      --track: #1c2333;
     }
   }
 
@@ -58,7 +56,6 @@
     gap: 10px;
     text-decoration: none;
     color: inherit;
-    cursor: pointer;
   }
 
   .brand svg { display: block; color: var(--accent-b); }
@@ -83,54 +80,26 @@
     font-weight: 600;
   }
 
-  /* ---------- Topic list ---------- */
-  .topic-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 18px;
-  }
-
-  .topic-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 20px;
-    border-radius: 18px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    text-align: left;
-    color: inherit;
-    font: inherit;
-    transition: transform 180ms ease, box-shadow 180ms ease;
-  }
-
-  .topic-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
-  }
-
-  .topic-card h3 {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.4;
-    font-weight: 750;
-    letter-spacing: -0.01em;
-  }
-
-  .topic-meta {
+  .legend {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    font-size: 12.5px;
+    gap: 10px;
+    padding: 10px 16px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    font-size: 12px;
     color: var(--muted);
     font-weight: 600;
   }
 
-  .topic-meta .count {
-    color: var(--accent-b);
-    font-weight: 800;
+  .legend .swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(45deg, #dc2626, #16a34a);
+    flex: 0 0 auto;
   }
 
   /* ---------- Notices / skeletons ---------- */
@@ -151,7 +120,7 @@
     background-size: 400% 100%;
     animation: shimmer 1.4s ease infinite;
     border-radius: 18px;
-    height: 92px;
+    height: 220px;
   }
 
   @keyframes shimmer {
@@ -159,72 +128,94 @@
     100% { background-position: -100% 0; }
   }
 
-  /* ---------- Topic detail ---------- */
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 0;
-    margin-bottom: 16px;
+  /* ---------- Topic feed ---------- */
+  .topic-section {
+    margin-bottom: 36px;
   }
-  .back-link:hover { color: var(--text); }
 
-  .topic-title {
-    font-size: 24px;
+  .topic-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .topic-header h2 {
+    margin: 0;
+    font-size: 19px;
     font-weight: 800;
-    letter-spacing: -0.02em;
-    margin: 0 0 4px;
+    letter-spacing: -0.01em;
   }
 
-  .topic-sub {
+  .topic-header .topic-meta {
+    font-size: 12.5px;
+    font-weight: 700;
     color: var(--muted);
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0 0 20px;
   }
 
   .stance-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 16px 18px;
-    border-radius: 16px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    margin-bottom: 22px;
+    gap: 6px;
+    margin-bottom: 14px;
   }
 
   .stance-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
+    padding: 4px 10px;
     border-radius: 999px;
-    font-size: 12.5px;
+    font-size: 11.5px;
     font-weight: 800;
   }
 
   .article-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* Diagonal gradient "border": credibility color meets the top-right edge,
+     clickbait color meets the bottom-left edge, blending across the middle. */
+  .article-card-border {
+    padding: 4px;
+    border-radius: 22px;
   }
 
   .article-card {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 18px;
     border-radius: 18px;
     background: var(--card);
-    border: 1px solid var(--border);
     box-shadow: var(--shadow);
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .article-card .thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, rgba(59,130,246,0.16), rgba(67,56,202,0.16));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .article-card .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .article-card .thumb svg { opacity: 0.35; }
+
+  .article-card .body {
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
   }
 
   .article-source {
@@ -240,6 +231,7 @@
     font-size: 13.5px;
     line-height: 1.55;
     color: var(--text);
+    flex: 1;
   }
 
   .stance-badge {
@@ -249,31 +241,6 @@
     font-size: 12px;
     font-weight: 800;
   }
-
-  .score-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--muted);
-  }
-
-  .score-label { flex: 0 0 46px; }
-
-  .score-track {
-    flex: 1;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--track);
-    overflow: hidden;
-  }
-
-  .score-fill { height: 100%; border-radius: 999px; }
-  .score-fill.credibility { background: linear-gradient(90deg, var(--accent-a), var(--accent-b)); }
-  .score-fill.clickbait { background: #ef4444; }
-
-  .score-value { flex: 0 0 26px; text-align: right; color: var(--text); }
 
   details.reason {
     font-size: 12.5px;
@@ -309,7 +276,7 @@
 <body>
 
 <header>
-  <a class="brand" id="brandLink" href="#/">
+  <a class="brand" href="/">
     <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="12.5" cy="12.5" r="8.5" stroke="currentColor" stroke-width="3"/>
       <path d="M18.5 18.5L25 25" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
@@ -348,14 +315,12 @@
   };
   const STANCE_ORDER = ["비판적", "옹호적", "긍정적", "부정적", "중립적"];
 
-  let unsubscribeTopics = null;
-
-  function stopTopicListener() {
-    if (unsubscribeTopics) {
-      unsubscribeTopics();
-      unsubscribeTopics = null;
-    }
-  }
+  const PLACEHOLDER_ICON = `
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M7 9H17M7 13H14M7 17H11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+  `;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -390,6 +355,15 @@
     return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
+  // 0~100 점수를 빨강(나쁨)~초록(좋음) 색상으로 변환. invert가 true면
+  // 점수가 높을수록 나쁜 지표(어그로도)에 맞게 축을 뒤집습니다.
+  function scoreToColor(score, invert) {
+    const clamped = Math.max(0, Math.min(100, Number(score) || 0));
+    const goodness = invert ? 100 - clamped : clamped;
+    const hue = (goodness / 100) * 120;
+    return `hsl(${hue}, 72%, 45%)`;
+  }
+
   function renderNotice(title, detail) {
     appEl.innerHTML = `
       <div class="notice">
@@ -399,63 +373,35 @@
     `;
   }
 
-  function renderSkeleton(count = 6) {
-    const items = Array.from({ length: count }, () => `<div class="skeleton"></div>`).join("");
-    appEl.innerHTML = `<p class="status-line">불러오는 중...</p><div class="topic-grid">${items}</div>`;
+  function renderSkeleton() {
+    const items = Array.from({ length: 4 }, () => `<div class="skeleton"></div>`).join("");
+    appEl.innerHTML = `<p class="status-line">불러오는 중...</p><div class="article-grid">${items}</div>`;
   }
 
-  // ─────────────────────────────────────────────
-  // 주제 목록 화면
-  // ─────────────────────────────────────────────
-  function renderTopicList(topics) {
-    if (!topics.length) {
-      appEl.innerHTML = `<p class="status-line">최근 이슈 0건</p>`;
-      renderNotice("표시할 이슈가 없습니다", "아직 분석된 기사가 쌓이지 않았습니다.");
-      return;
+  // 기사 원문 페이지에서 og:image를 직접 fetch해 썸네일로 씁니다.
+  // 대부분의 언론사는 CORS를 열어두지 않아 실패할 수 있으며, 실패 시 조용히
+  // 플레이스홀더 아이콘을 유지합니다.
+  async function loadThumbInto(url, thumbEl) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return;
+      const html = await response.text();
+      const match =
+        html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+        html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+      if (!match) return;
+      const img = document.createElement("img");
+      img.src = match[1];
+      img.alt = "";
+      img.loading = "lazy";
+      img.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
+      thumbEl.innerHTML = "";
+      thumbEl.appendChild(img);
+    } catch (error) {
+      // 이미지 fetch 실패는 조용히 무시 — 플레이스홀더 아이콘을 유지합니다.
     }
-
-    const cards = topics.map((topic) => `
-      <button class="topic-card" data-topic-id="${escapeHtml(topic.id)}">
-        <h3>${escapeHtml(topic.topic || "제목 없음")}</h3>
-        <div class="topic-meta">
-          <span class="count">${(topic.articleUrls || []).length}개 매체 보도</span>
-          <span>${escapeHtml(timeAgo(topic.updatedAt))}</span>
-        </div>
-      </button>
-    `).join("");
-
-    appEl.innerHTML = `
-      <p class="status-line">최근 이슈 ${topics.length}건</p>
-      <div class="topic-grid">${cards}</div>
-    `;
-
-    appEl.querySelectorAll(".topic-card").forEach((el) => {
-      el.addEventListener("click", () => {
-        location.hash = `#/topic/${encodeURIComponent(el.dataset.topicId)}`;
-      });
-    });
   }
 
-  function loadTopicList() {
-    stopTopicListener();
-    renderSkeleton();
-
-    const topicsQuery = query(collection(db, "topics"), orderBy("updatedAt", "desc"), limit(60));
-    unsubscribeTopics = onSnapshot(
-      topicsQuery,
-      (snapshot) => {
-        const topics = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-        renderTopicList(topics);
-      },
-      () => {
-        renderNotice("이슈 목록을 불러오지 못했습니다", "잠시 후 다시 시도해주세요.");
-      }
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // 주제 상세 화면
-  // ─────────────────────────────────────────────
   function stanceSummary(articles) {
     const counts = new Map();
     articles.forEach(({ analysis }) => {
@@ -473,65 +419,52 @@
     return `<div class="stance-summary">${chips}</div>`;
   }
 
-  function scoreBar(label, value, kind) {
-    const pct = Math.max(0, Math.min(100, Number(value) || 0));
-    return `
-      <div class="score-row">
-        <span class="score-label">${label}</span>
-        <div class="score-track"><div class="score-fill ${kind}" style="width:${pct}%"></div></div>
-        <span class="score-value">${pct}</span>
-      </div>
-    `;
-  }
-
   function createArticleCard(article, analysis) {
     const stance = analysis.direction?.stance;
-    const color = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
+    const stanceColor = STANCE_COLORS[stance] || STANCE_COLORS["중립적"];
     const stanceBadge = stance
-      ? `<span class="stance-badge" style="background:${color.bg};color:${color.fg}">${escapeHtml(stance)}</span>`
+      ? `<span class="stance-badge" style="background:${stanceColor.bg};color:${stanceColor.fg}">${escapeHtml(stance)}</span>`
       : "";
     const reason = analysis.direction?.reason
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
       : "";
 
-    return `
+    // 오른쪽 위 대각선 = 신뢰도, 왼쪽 아래 대각선 = 어그로도. 두 색이 다르면
+    // 그 사이가 자연스럽게 그라데이션으로 이어집니다.
+    const credibilityColor = scoreToColor(analysis.credibility_score, false);
+    const clickbaitColor = scoreToColor(analysis.clickbait_score, true);
+    const borderStyle = `background: linear-gradient(45deg, ${clickbaitColor}, ${credibilityColor});`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "article-card-border";
+    wrapper.style = borderStyle;
+    wrapper.innerHTML = `
       <div class="article-card">
-        <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
-        <p class="article-summary">${escapeHtml(analysis.article_summary || "")}</p>
-        ${stanceBadge}
-        ${scoreBar("신뢰도", analysis.credibility_score, "credibility")}
-        ${scoreBar("어그로도", analysis.clickbait_score, "clickbait")}
-        ${reason}
-        <a class="article-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>
+        <div class="thumb">${PLACEHOLDER_ICON}</div>
+        <div class="body">
+          <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
+          <p class="article-summary">${escapeHtml(analysis.article_summary || "")}</p>
+          ${stanceBadge}
+          ${reason}
+          <a class="article-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">원문 보기 →</a>
+        </div>
       </div>
     `;
+
+    const thumbEl = wrapper.querySelector(".thumb");
+    loadThumbInto(article.url, thumbEl);
+
+    return wrapper;
   }
 
-  async function loadTopicDetail(topicId) {
-    stopTopicListener();
-    appEl.innerHTML = `<p class="status-line">불러오는 중...</p>`;
-
-    let topicSnap;
-    try {
-      topicSnap = await getDoc(doc(db, "topics", topicId));
-    } catch (error) {
-      renderNotice("이슈를 불러오지 못했습니다", "잠시 후 다시 시도해주세요.");
-      return;
-    }
-
-    if (!topicSnap.exists()) {
-      renderNotice("이슈를 찾을 수 없습니다", "목록으로 돌아가 다른 이슈를 선택해주세요.");
-      return;
-    }
-
-    const topic = topicSnap.data();
+  // ─────────────────────────────────────────────
+  // 주제별 기사 로딩 — topics.articleUrls를 해시해 analysisResults에서 조회
+  // ─────────────────────────────────────────────
+  async function loadTopicArticles(topic) {
     const urls = Array.isArray(topic.articleUrls) ? topic.articleUrls : [];
-
     const docIds = await Promise.all(urls.map((url) => sha256Hex(url)));
     const articleDocs = await Promise.all(
-      docIds.map((docId) =>
-        getDoc(doc(db, "analysisResults", docId)).catch(() => null)
-      )
+      docIds.map((docId) => getDoc(doc(db, "analysisResults", docId)).catch(() => null))
     );
 
     const articles = [];
@@ -541,41 +474,81 @@
       if (!analysis.is_article) return;
       articles.push({ article: { url: urls[index] }, analysis });
     });
+    return articles;
+  }
 
-    const cards = articles.map(({ article, analysis }) => createArticleCard(article, analysis)).join("");
-
-    appEl.innerHTML = `
-      <button class="back-link" id="backLink">← 목록으로</button>
-      <h1 class="topic-title">${escapeHtml(topic.topic || "제목 없음")}</h1>
-      <p class="topic-sub">${articles.length}개 매체 보도 · ${escapeHtml(timeAgo(topic.updatedAt))} 업데이트</p>
-      ${stanceSummary(articles)}
-      ${articles.length ? `<div class="article-grid">${cards}</div>` : ""}
-    `;
+  function renderTopicSection(topic, articles) {
+    const sectionEl = document.createElement("section");
+    sectionEl.className = "topic-section";
 
     if (!articles.length) {
-      renderNotice("표시할 기사가 없습니다", "이 이슈에 연결된 기사의 분석 기록을 찾지 못했습니다.");
+      sectionEl.innerHTML = `
+        <div class="topic-header">
+          <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
+          <span class="topic-meta">${escapeHtml(timeAgo(topic.updatedAt))} 업데이트</span>
+        </div>
+        <p class="status-line">이 이슈에 연결된 기사의 분석 기록을 찾지 못했습니다.</p>
+      `;
+      return sectionEl;
     }
 
-    document.getElementById("backLink").addEventListener("click", () => {
-      location.hash = "#/";
+    sectionEl.innerHTML = `
+      <div class="topic-header">
+        <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
+        <span class="topic-meta">${articles.length}개 매체 보도 · ${escapeHtml(timeAgo(topic.updatedAt))} 업데이트</span>
+      </div>
+      ${stanceSummary(articles)}
+    `;
+
+    const gridEl = document.createElement("div");
+    gridEl.className = "article-grid";
+    articles.forEach(({ article, analysis }) => {
+      gridEl.appendChild(createArticleCard(article, analysis));
+    });
+    sectionEl.appendChild(gridEl);
+
+    return sectionEl;
+  }
+
+  async function renderFeed(topics) {
+    if (!topics.length) {
+      appEl.innerHTML = "";
+      renderNotice("표시할 이슈가 없습니다", "아직 분석된 기사가 쌓이지 않았습니다.");
+      return;
+    }
+
+    appEl.innerHTML = `
+      <p class="status-line">최근 이슈 ${topics.length}건</p>
+      <div class="legend"><span class="swatch"></span>기사 테두리 색: 오른쪽 위 = 신뢰도, 왼쪽 아래 = 어그로도 (빨강 낮음 · 초록 높음)</div>
+      <div id="feedList"></div>
+    `;
+    const feedListEl = document.getElementById("feedList");
+
+    const sections = await Promise.all(
+      topics.map(async (topic) => {
+        const articles = await loadTopicArticles(topic);
+        return { topic, articles };
+      })
+    );
+
+    feedListEl.innerHTML = "";
+    sections.forEach(({ topic, articles }) => {
+      feedListEl.appendChild(renderTopicSection(topic, articles));
     });
   }
 
-  // ─────────────────────────────────────────────
-  // 라우팅
-  // ─────────────────────────────────────────────
-  function route() {
-    const hash = location.hash || "#/";
-    const match = hash.match(/^#\/topic\/(.+)$/);
-    if (match) {
-      loadTopicDetail(decodeURIComponent(match[1]));
-    } else {
-      loadTopicList();
+  const topicsQuery = query(collection(db, "topics"), orderBy("updatedAt", "desc"), limit(30));
+  renderSkeleton();
+  onSnapshot(
+    topicsQuery,
+    (snapshot) => {
+      const topics = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderFeed(topics);
+    },
+    () => {
+      renderNotice("이슈 목록을 불러오지 못했습니다", "잠시 후 다시 시도해주세요.");
     }
-  }
-
-  window.addEventListener("hashchange", route);
-  route();
+  );
 </script>
 
 </body>
