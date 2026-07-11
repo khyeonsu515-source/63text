@@ -211,6 +211,23 @@
     animation: riseIn 500ms ease both;
   }
 
+  /* 키워드가 겹쳐 같은 묶음으로 판단된, 바로 앞 주제와 이어지는 두 번째 이후 항목.
+     구분선을 얇게 해서 시각적으로 더 가깝게(연관 있게) 보이도록 합니다. */
+  .topic-section.clustered {
+    border-top: 2px solid var(--border-soft);
+    padding-top: 14px;
+    margin-bottom: 28px;
+  }
+
+  .related-tag {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
   .topic-header {
     display: flex;
     align-items: baseline;
@@ -580,11 +597,12 @@
     return articles;
   }
 
-  function renderTopicSection(topic, articles, sectionDelayMs) {
+  function renderTopicSection(topic, articles, sectionDelayMs, isClustered) {
     const sectionEl = document.createElement("section");
-    sectionEl.className = "topic-section";
+    sectionEl.className = isClustered ? "topic-section clustered" : "topic-section";
     sectionEl.style.animationDelay = `${sectionDelayMs}ms`;
 
+    const relatedTag = isClustered ? `<span class="related-tag">관련 이슈</span>` : "";
     const categoryKicker = topic.category
       ? `<span class="topic-category">${escapeHtml(topic.category)}</span>`
       : "";
@@ -593,6 +611,7 @@
       sectionEl.innerHTML = `
         <div class="topic-header">
           <div class="topic-title-block">
+            ${relatedTag}
             ${categoryKicker}
             <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
           </div>
@@ -606,6 +625,7 @@
     sectionEl.innerHTML = `
       <div class="topic-header">
         <div class="topic-title-block">
+          ${relatedTag}
           ${categoryKicker}
           <h2>${escapeHtml(topic.topic || "제목 없음")}</h2>
         </div>
@@ -652,10 +672,76 @@
     });
   }
 
+  // 서로 다른 topic이라도 core_keywords가 어느 정도 겹치면 연관 있다고 보고
+  // 화면에서 가까운 위치에 묶어서 보여줍니다. topics.keywords는 이미 있는
+  // 값이라 Firestore 스키마 변경이나 추가 조회 없이 클라이언트에서만 계산합니다.
+  const RELATED_TOPIC_OVERLAP_THRESHOLD = 0.2;
+
+  // Jaccard 유사도: 두 키워드 집합의 교집합 크기 / 합집합 크기.
+  function keywordOverlapRatio(keywordsA, keywordsB) {
+    const setA = new Set(keywordsA || []);
+    const setB = new Set(keywordsB || []);
+    if (!setA.size || !setB.size) return 0;
+    let intersection = 0;
+    setA.forEach((kw) => { if (setB.has(kw)) intersection += 1; });
+    const union = new Set([...setA, ...setB]).size;
+    return union === 0 ? 0 : intersection / union;
+  }
+
+  // Union-Find로 키워드가 겹치는 topic들을 하나의 묶음으로 그룹화하고,
+  // 묶음은 내부 최신순으로, 묶음끼리는 묶음의 최신 updatedAt 기준으로 정렬합니다.
+  // 반환값은 평평한 배열이며, 각 항목에 isClustered(묶음의 2번째 이후 항목인지)를 붙입니다.
+  function clusterRelatedTopics(sections) {
+    const parent = sections.map((_, i) => i);
+    function find(i) {
+      while (parent[i] !== i) {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+      }
+      return i;
+    }
+    function union(a, b) {
+      const rootA = find(a);
+      const rootB = find(b);
+      if (rootA !== rootB) parent[rootA] = rootB;
+    }
+
+    for (let i = 0; i < sections.length; i += 1) {
+      for (let j = i + 1; j < sections.length; j += 1) {
+        const ratio = keywordOverlapRatio(sections[i].topic.keywords, sections[j].topic.keywords);
+        if (ratio >= RELATED_TOPIC_OVERLAP_THRESHOLD) {
+          union(i, j);
+        }
+      }
+    }
+
+    const clusters = new Map();
+    sections.forEach((section, i) => {
+      const root = find(i);
+      if (!clusters.has(root)) clusters.set(root, []);
+      clusters.get(root).push(section);
+    });
+
+    const clusterList = [...clusters.values()].map((members) => {
+      members.sort((a, b) => (b.topic.updatedAt || 0) - (a.topic.updatedAt || 0));
+      return members;
+    });
+    clusterList.sort((a, b) => (b[0].topic.updatedAt || 0) - (a[0].topic.updatedAt || 0));
+
+    const ordered = [];
+    clusterList.forEach((members) => {
+      members.forEach((section, index) => {
+        ordered.push({ ...section, isClustered: index > 0 });
+      });
+    });
+    return ordered;
+  }
+
   function renderFilteredFeed() {
     const filtered = activeCategory === "전체"
       ? currentSections
       : currentSections.filter(({ topic }) => topic.category === activeCategory);
+    const ordered = clusterRelatedTopics(filtered);
 
     const feedListEl = document.getElementById("feedList");
     const statusEl = document.getElementById("feedStatus");
@@ -667,8 +753,8 @@
     if (!feedListEl) return;
 
     feedListEl.innerHTML = "";
-    filtered.forEach(({ topic, articles }, index) => {
-      feedListEl.appendChild(renderTopicSection(topic, articles, index * 90));
+    ordered.forEach(({ topic, articles, isClustered }, index) => {
+      feedListEl.appendChild(renderTopicSection(topic, articles, index * 90, isClustered));
     });
   }
 
