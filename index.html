@@ -625,9 +625,10 @@
   const MAX_STAGGER_STEPS = 8;           // 지연 누적 상한 (많은 항목일 때 마지막이 너무 늦게 뜨지 않게)
 
   const CARD_EXPAND_DELAY_MS = 1500;     // 이 시간 이상 머물러야 카드가 옆으로 펼쳐짐
-  const CARD_EXPAND_MIN_PANEL_WIDTH = 260;
-  const CARD_EXPAND_MAX_PANEL_WIDTH = 340;
   const CARD_EXPAND_GAP = 20;            // 본문과 세부 패널 사이 간격(px)
+  const CARD_EXPAND_MIN_PANEL_WIDTH = 160; // 펼쳤을 때 이보다 패널이 좁아지면(모바일 등) 아예 펼치지 않음
+  const CARD_EXPAND_ANIM_MS = 420;       // 펼침 애니메이션 총 소요 시간
+  const CARD_COLLAPSE_ANIM_MS = 320;     // 접힘 애니메이션 소요 시간
 
   // Intone이 새 topic을 만들 때 매기는 고정 대분류와 순서를 맞춥니다.
   const CATEGORY_ORDER = ["정치", "경제", "사회", "국제", "문화", "과학기술", "스포츠", "연예", "기타"];
@@ -852,9 +853,18 @@
       }
       wrapper.classList.remove("is-expanded");
 
-      const collapsedWidth = placeholder ? placeholder.getBoundingClientRect().width : null;
-      if (collapsedWidth) {
-        wrapper.style.width = `${collapsedWidth}px`;
+      // 펼치는 동안 left도 0까지 움직였으므로, 접을 때는 폭뿐 아니라
+      // left도 원래 자리(자리표시자 위치)로 함께 되돌립니다.
+      const gridEl = wrapper.closest(".article-grid");
+      const placeholderRect = placeholder ? placeholder.getBoundingClientRect() : null;
+      if (placeholderRect && gridEl) {
+        const gridRect = gridEl.getBoundingClientRect();
+        wrapper.style.transition =
+          `width ${CARD_COLLAPSE_ANIM_MS}ms var(--ease), ` +
+          `left ${CARD_COLLAPSE_ANIM_MS}ms var(--ease), ` +
+          `transform 320ms var(--ease), box-shadow 320ms var(--ease)`;
+        wrapper.style.width = `${placeholderRect.width}px`;
+        wrapper.style.left = `${placeholderRect.left - gridRect.left}px`;
       }
 
       const cleanup = () => {
@@ -862,6 +872,7 @@
         wrapper.style.top = "";
         wrapper.style.left = "";
         wrapper.style.width = "";
+        wrapper.style.transition = "";
         wrapper.style.removeProperty("--panel-width");
         placeholder?.remove();
         placeholder = null;
@@ -880,7 +891,7 @@
         if (event.target === wrapper && event.propertyName === "width") finish();
       };
       wrapper.addEventListener("transitionend", onTransitionEnd);
-      window.setTimeout(finish, 500);
+      window.setTimeout(finish, CARD_COLLAPSE_ANIM_MS + 180);
     }
 
     function expand() {
@@ -900,7 +911,15 @@
       const rect = wrapper.getBoundingClientRect();
       const collapsedWidth = rect.width;
       const top = rect.top - gridRect.top;
-      let left = rect.left - gridRect.left;
+      const originalLeft = rect.left - gridRect.left;
+      const rowWidth = gridRect.width; // 그리드의 한 행은 항상 그리드 전체 폭을 씁니다.
+
+      // 펼쳤을 때 다른 기사가 한 조각이라도 튀어나와 보이지 않도록, 펼쳐진
+      // 카드는 항상 자기 줄(그리드 폭) 전체를 정확히 채웁니다. 채울 여유가
+      // 너무 좁으면(모바일 1열 레이아웃 등) 어색하게 살짝만 펼쳐지는 대신
+      // 아예 펼치지 않습니다.
+      const panelWidth = rowWidth - collapsedWidth - CARD_EXPAND_GAP;
+      if (panelWidth < CARD_EXPAND_MIN_PANEL_WIDTH) return;
 
       // 그리드 자리를 그대로 예약해두는 자리표시자 — wrapper와 똑같은
       // 위치(다음 형제로)에 넣어서, wrapper가 absolute로 빠져도 다른
@@ -910,31 +929,41 @@
       placeholder.style.height = `${rect.height}px`;
       wrapper.before(placeholder);
 
-      const panelWidth = Math.max(
-        CARD_EXPAND_MIN_PANEL_WIDTH,
-        Math.min(CARD_EXPAND_MAX_PANEL_WIDTH, collapsedWidth)
-      );
-      const expandedWidth = collapsedWidth + CARD_EXPAND_GAP + panelWidth;
-
-      // 오른쪽 끝 카드라 오른쪽으로 펼치면 그리드 밖으로 넘칠 경우,
-      // 왼쪽으로 방향을 바꿔서 항상 그리드 안에 들어오게 합니다.
-      if (left + expandedWidth > gridRect.width) {
-        left = Math.max(0, gridRect.width - expandedWidth);
-      }
-
       wrapper.style.position = "absolute";
       wrapper.style.top = `${top}px`;
-      wrapper.style.left = `${left}px`;
+      wrapper.style.left = `${originalLeft}px`;
       wrapper.style.width = `${collapsedWidth}px`;
       wrapper.style.setProperty("--panel-width", `${panelWidth}px`);
 
-      // 폭을 먼저 "지금과 같은 값"으로 명시적으로 고정한 뒤, 다음 프레임에
-      // 목표 폭으로 바꿔야 transition이 실제로 애니메이션됩니다(같은 프레임에
-      // position: absolute와 목표 폭을 한 번에 주면 전환 없이 바로 점프해버림).
+      // Intone 팝업이 아래로 늘어나다가 화면 끝에 부딪히면 그때부터 반대
+      // 방향(위)으로 늘어나는 것과 같은 방식: 먼저 오른쪽으로 늘어나 줄의
+      // 오른쪽 끝에 닿을 때까지 자라고, 그 뒤로는 오른쪽 끝을 그대로 붙인 채
+      // 왼쪽으로 계속 늘어나 결국 줄 왼쪽 끝(left:0)까지 닿습니다.
+      // width는 처음부터 끝까지 하나의 선형(linear) 전환이고, left는 오른쪽
+      // 여유(rightGap)를 다 쓴 시점부터 delay만큼 늦게 움직이기 시작하도록
+      // 만들어서, 두 구간 내내 "오른쪽 끝 = 줄 오른쪽 경계"가 수학적으로
+      // 정확히 맞물립니다(선형 구간에서 left+width의 변화율이 항상 상쇄되도록
+      // 구간 길이를 rightGap : leftGap 비율로 나눴기 때문 — 다른 기사가
+      // 한순간이라도 비집고 튀어나올 여지가 없습니다).
+      const rightGap = rowWidth - (originalLeft + collapsedWidth);
+      const leftGap = originalLeft;
+      const totalGrowth = rightGap + leftGap; // = rowWidth - collapsedWidth, 항상 > 0(위 가드에서 보장)
+      const phase1Ms = (CARD_EXPAND_ANIM_MS * rightGap) / totalGrowth;
+      const phase2Ms = CARD_EXPAND_ANIM_MS - phase1Ms;
+
+      // 폭/좌표를 먼저 "지금과 같은 값"으로 명시적으로 고정한 뒤, 다음
+      // 프레임에 목표 값으로 바꿔야 transition이 실제로 애니메이션됩니다
+      // (같은 프레임에 position: absolute와 목표 값을 한 번에 주면 전환
+      // 없이 바로 점프해버림).
       requestAnimationFrame(() => {
         if (!expanded) return; // 그 사이 collapse()가 먼저 불렸으면 건너뜀
         wrapper.classList.add("is-expanded");
-        wrapper.style.width = `${expandedWidth}px`;
+        wrapper.style.transition =
+          `width ${CARD_EXPAND_ANIM_MS}ms linear, ` +
+          `left ${phase2Ms}ms linear ${phase1Ms}ms, ` +
+          `transform 320ms var(--ease), box-shadow 320ms var(--ease)`;
+        wrapper.style.width = `${rowWidth}px`;
+        wrapper.style.left = "0px";
       });
 
       expanded = true;
