@@ -1,0 +1,599 @@
+:root {
+  --bg: #f7f7f9;
+  --bg-translucent: rgba(247, 247, 249, 0.78);
+  --card: #ffffff;
+  --text: #14151a;
+  --muted: #6b7280;
+  --border: #e7e7ec;
+  --accent: #6d5ef8;
+  --accent-2: #ff6b4a;
+  --accent-soft: rgba(109, 94, 248, 0.12);
+  --shadow-sm: 0 1px 2px rgba(20, 21, 26, 0.05);
+  --track: #eef0f4;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Noto Sans KR", sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-lg: 20px;
+  --focus-ring: 0 0 0 3px var(--accent-soft), 0 0 0 1.5px var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0a0a0d;
+    --bg-translucent: rgba(10, 10, 13, 0.78);
+    --card: #17181f;
+    --text: #f2f2f5;
+    --muted: #969ab0;
+    --border: #24252f;
+    --accent: #8f84ff;
+    --accent-2: #ff8464;
+    --accent-soft: rgba(143, 132, 255, 0.16);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --track: #1e1f28;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(640px circle at 6% -12%, var(--accent-soft), transparent 60%),
+    radial-gradient(520px circle at 100% 0%, rgba(255, 107, 74, 0.08), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: 8px;
+}
+
+/* ---------- Header ---------- */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 16px 28px;
+  background: var(--bg-translucent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid var(--border);
+}
+
+.masthead {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand .logo-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 14px var(--accent);
+  flex: 0 0 auto;
+}
+
+.brand .wordmark {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.brand .tagline {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 2px;
+}
+
+.edition-date {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* ---------- Category tabs ---------- */
+.category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 16px 28px 4px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.category-tabs:empty { display: none; }
+
+.category-tab {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 200ms var(--ease), border-color 200ms var(--ease), background 200ms var(--ease);
+}
+
+.category-tab:hover { border-color: var(--accent); color: var(--text); }
+
+.category-tab.active {
+  background: linear-gradient(135deg, var(--accent), #8f6bff);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px -6px var(--accent);
+}
+
+main {
+  padding: 20px 28px 64px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.status-line {
+  padding: 4px 2px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  margin-bottom: 32px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.legend .swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ef4444, #22c55e);
+  flex: 0 0 auto;
+}
+
+/* ---------- Notices / skeletons ---------- */
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 20px;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.notice strong { color: var(--text); font-size: 17px; font-weight: 800; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--track) 25%, var(--border) 37%, var(--track) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  height: 260px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ---------- Entrance animation ---------- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Topic feed ---------- */
+.topic-section {
+  margin-bottom: 48px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+  animation: riseIn 520ms var(--ease) both;
+}
+
+.topic-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* 키워드가 겹쳐 같은 묶음으로 판단된, 바로 앞 주제와 이어지는 두 번째 이후 항목.
+   구분선 없이 간격만 좁혀서 시각적으로 더 가깝게(연관 있게) 보이도록 합니다. */
+.topic-section.clustered {
+  border-top: none;
+  padding-top: 0;
+  margin-top: -24px;
+  margin-bottom: 40px;
+}
+
+.related-tag {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.topic-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.topic-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topic-category {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.topic-header h2 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.topic-header .topic-meta {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.topic-empty {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.stance-chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.article-grid {
+  position: relative; /* 확장된 카드가 이 기준으로 절대 위치를 잡습니다 */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+/* 그리드 자리를 그대로 예약해두는 투명 자리표시자 — 카드가 확장되며
+   그리드 흐름에서 빠져나가도(position:absolute) 다른 카드가 그 자리를
+   메우러 밀려오지 않도록 높이만 원래 카드와 똑같이 맞춥니다. */
+.article-card-placeholder {
+  visibility: hidden;
+}
+
+/* Diagonal gradient "border": credibility color meets the top-right edge,
+   clickbait color meets the bottom-left edge, blending across the middle.
+   On hover the same two colors bloom into a soft dual-tone glow. Width는
+   :hover가 아니라 JS가 붙이는 .is-expanded로만 바뀝니다 — 1.5초 이상
+   머물렀을 때만 옆으로 넓어지고, 넓어질 때 그리드 흐름에서 빠져나와
+   (position:absolute) 다른 카드를 밀어내지 않고 그 위를 덮습니다.
+   (useCardHoverExpand 참고) */
+.article-card-border {
+  position: relative;
+  z-index: 1;
+  padding: 3px;
+  border-radius: calc(var(--radius-lg) + 3px);
+  transition: width 380ms var(--ease), transform 320ms var(--ease), box-shadow 320ms var(--ease);
+  animation: riseIn 520ms var(--ease) both;
+  /* 평상시에도 신뢰도/어그로도 색이 옅게 은은히 비치는 앰비언트 글로우 */
+  box-shadow:
+    -6px 8px 20px -14px var(--glow-a, transparent),
+    6px -8px 20px -14px var(--glow-b, transparent);
+}
+
+/* 마우스 호버 또는 키보드 포커스 즉시(1.5초 기다리지 않고) 주는 가벼운 피드백.
+   실제 폭 확장/세부 패널은 .is-expanded가 붙어야만 일어납니다. */
+.article-card-border:hover,
+.article-card-border:focus-within {
+  transform: translateY(-6px);
+  box-shadow:
+    -14px 16px 38px -12px var(--glow-a, transparent),
+    14px -14px 38px -12px var(--glow-b, transparent);
+}
+
+.article-card-border.is-expanded {
+  z-index: 30;
+  box-shadow:
+    -20px 22px 48px -14px var(--glow-a, transparent),
+    20px -20px 48px -14px var(--glow-b, transparent);
+}
+
+.article-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: 100%;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* 기존 세로 카드(썸네일+본문)를 그대로 담는 왼쪽 칸. 확장 중에도 이 칸의
+   폭은 절대 안 바뀝니다 — 오른쪽에 .article-card-side가 커지는 만큼
+   바깥 .article-card-border 폭도 같이 늘어나서 이 칸 몫은 그대로 유지됩니다. */
+.article-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+/* 폭이 늘거나 줄어드는 동안(펼침 시작부터 접힘이 끝날 때까지) 내내 main을
+   확장 시작 시점 폭으로 고정합니다(아래 .article-card-side가 flex:1로 나머지
+   공간을 전부 흡수). is-expanded와 별도 클래스(is-sizing-locked)로 두는 이유:
+   is-expanded는 접힐 때 바로 떼서 글로우/투명도가 곧장 자연스럽게 페이드
+   되지만, 이 폭 고정만큼은 바깥 폭 transition이 완전히 끝날 때까지 계속
+   붙어 있어야 합니다 — 중간에 풀리면 side가 먼저 폭 0으로 돌아가는 순간
+   main이 flex:1로 남은 공간을 그대로 떠안아 잠깐 더 넓어지고, thumb의
+   aspect-ratio 때문에 카드가 순간적으로 아래로도 늘어나 보이는 버그가
+   펼칠 때든 접을 때든 똑같이 생기기 때문입니다. */
+.article-card-border.is-sizing-locked .article-card-main {
+  flex: 0 0 var(--main-width, auto);
+}
+
+.article-card--nolink .article-card-main { cursor: default; }
+
+.article-card .thumb {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg, var(--accent-soft), rgba(255, 107, 74, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.article-card .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 550ms var(--ease);
+}
+
+.article-card-border:hover .thumb img,
+.article-card-border:focus-within .thumb img {
+  transform: scale(1.06);
+}
+
+.article-card .thumb svg { opacity: 0.4; color: var(--accent); }
+
+.article-card .body {
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.article-topic-kicker {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.article-source {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.article-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.article-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.article-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.article-title a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.article-dek {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.stance-badge {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* 1.5초 이상 호버(또는 키보드 포커스)해서 .is-expanded가 붙어야만 이 오른쪽
+   칸이 나타납니다 — 세로 높이가 아니라 가로 폭만 늘어나는 확장이라, 왼쪽
+   본문(.article-card-main)의 크기는 전혀 안 바뀝니다. 폭은 별도 transition을
+   주지 않고 flex:1로만 지정합니다 — 옆 main이 폭을 고정값으로 못박고 있으니,
+   바깥 .article-card-border의 폭이 (JS가 미는) 하나의 transition으로 늘어나는
+   매 프레임마다 남는 공간을 그대로, 어긋남 없이 받아 채우게 됩니다. */
+.article-card-side {
+  flex: 0 0 auto;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  border-left: 0 solid var(--border);
+  transition: opacity 220ms var(--ease) 60ms, border-left-width 380ms var(--ease);
+}
+
+.article-card-border.is-sizing-locked .article-card-side {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.article-card-border.is-expanded .article-card-side {
+  opacity: 1;
+  border-left-width: 1px;
+}
+
+.article-detail {
+  width: 100%;
+  /* 부모 폭이 0이 되어도 내부 콘텐츠가 세로로 찌그러지지 않게 방어 */
+  min-width: max-content;
+  padding: 20px 20px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detail-col h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+
+.breakdown-label { flex: 0 0 96px; }
+
+.breakdown-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.breakdown-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 560ms var(--ease) 120ms;
+}
+
+.article-card-border.is-expanded .breakdown-fill {
+  width: var(--target-width);
+}
+
+.breakdown-value {
+  flex: 0 0 32px;
+  text-align: right;
+  color: var(--text);
+  font-weight: 600;
+}
+
+details.reason {
+  font-size: 12.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+details.reason summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  list-style: none;
+}
+details.reason summary::-webkit-details-marker { display: none; }
+details.reason p { margin: 6px 0 0; line-height: 1.5; color: var(--text); }
+
+/* 모션에 민감한 사용자를 위해 애니메이션/전환을 비활성화합니다. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

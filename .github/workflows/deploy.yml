@@ -23,10 +23,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare dist
-        run: |
-          mkdir -p dist
-          cp index.html dist/index.html
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
 
       - uses: actions/configure-pages@v5
 
