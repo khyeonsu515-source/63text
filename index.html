@@ -322,23 +322,33 @@
   }
 
   .article-grid {
+    position: relative; /* 확장된 카드가 이 기준으로 절대 위치를 잡습니다 */
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 22px;
     align-items: start;
   }
 
+  /* 그리드 자리를 그대로 예약해두는 투명 자리표시자 — 카드가 확장되며
+     그리드 흐름에서 빠져나가도(position:absolute) 다른 카드가 그 자리를
+     메우러 밀려오지 않도록 높이만 원래 카드와 똑같이 맞춥니다. */
+  .article-card-placeholder {
+    visibility: hidden;
+  }
+
   /* Diagonal gradient "border": credibility color meets the top-right edge,
      clickbait color meets the bottom-left edge, blending across the middle.
-     On hover the same two colors bloom into a soft dual-tone glow, and the
-     card spans two grid columns to make room for the detail breakdown. */
+     On hover the same two colors bloom into a soft dual-tone glow. Width는
+     :hover가 아니라 JS가 붙이는 .is-expanded로만 바뀝니다 — 1.5초 이상
+     머물렀을 때만 옆으로 넓어지고, 넓어질 때 그리드 흐름에서 빠져나와
+     (position:absolute) 다른 카드를 밀어내지 않고 그 위를 덮습니다.
+     (setupCardHoverExpand 참고) */
   .article-card-border {
     position: relative;
     z-index: 1;
-    grid-column: span 1;
     padding: 3px;
     border-radius: calc(var(--radius-lg) + 3px);
-    transition: transform 320ms var(--ease), box-shadow 320ms var(--ease);
+    transition: width 380ms var(--ease), transform 320ms var(--ease), box-shadow 320ms var(--ease);
     animation: riseIn 520ms var(--ease) both;
     /* 평상시에도 신뢰도/어그로도 색이 옅게 은은히 비치는 앰비언트 글로우 */
     box-shadow:
@@ -346,28 +356,46 @@
       6px -8px 20px -14px var(--glow-b, transparent);
   }
 
-  /* 마우스 호버 또는 키보드 포커스(자식 링크에 focus) 시 카드를 넓혀 세부 분석을 펼칩니다. */
+  /* 마우스 호버 또는 키보드 포커스 즉시(1.5초 기다리지 않고) 주는 가벼운 피드백.
+     실제 폭 확장/세부 패널은 .is-expanded가 붙어야만 일어납니다. */
   .article-card-border:hover,
   .article-card-border:focus-within {
-    grid-column: span 2;
-    z-index: 20;
     transform: translateY(-6px);
     box-shadow:
       -14px 16px 38px -12px var(--glow-a, transparent),
       14px -14px 38px -12px var(--glow-b, transparent);
   }
 
+  .article-card-border.is-expanded {
+    z-index: 30;
+    box-shadow:
+      -20px 22px 48px -14px var(--glow-a, transparent),
+      20px -20px 48px -14px var(--glow-b, transparent);
+  }
+
   .article-card {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: stretch;
+    height: 100%;
     background: var(--card);
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+  }
+
+  /* 기존 세로 카드(썸네일+본문)를 그대로 담는 왼쪽 칸. 확장 중에도 이 칸의
+     폭은 절대 안 바뀝니다 — 오른쪽에 .article-card-side가 커지는 만큼
+     바깥 .article-card-border 폭도 같이 늘어나서 이 칸 몫은 그대로 유지됩니다. */
+  .article-card-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
     cursor: pointer;
   }
 
-  .article-card--nolink { cursor: default; }
+  .article-card--nolink .article-card-main { cursor: default; }
 
   .article-card .thumb {
     width: 100%;
@@ -377,6 +405,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    flex: 0 0 auto;
   }
 
   .article-card .thumb img {
@@ -454,22 +483,30 @@
     font-weight: 700;
   }
 
-  /* 카드에 마우스를 올리거나(:hover) 키보드로 포커스(:focus-within)하면 카드가
-     그리드 2칸으로 넓어지면서(grid-column: span 2) 이 세부 분석 패널이 펼쳐집니다. */
-  .article-detail {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    max-height: 0;
-    opacity: 0;
+  /* 1.5초 이상 호버(또는 키보드 포커스)해서 .is-expanded가 붙어야만 이 오른쪽
+     칸의 폭이 0에서 벌어지며 나타납니다 — 세로 높이가 아니라 가로 폭만
+     늘어나는 확장이라, 왼쪽 본문(.article-card-main)의 크기는 전혀 안 바뀝니다. */
+  .article-card-side {
+    flex: 0 0 auto;
+    width: 0;
     overflow: hidden;
-    transition: max-height 360ms var(--ease), opacity 240ms var(--ease);
+    opacity: 0;
+    border-left: 0 solid var(--border);
+    transition: width 380ms var(--ease), opacity 220ms var(--ease) 60ms, border-left-width 380ms var(--ease);
   }
 
-  .article-card-border:hover .article-detail,
-  .article-card-border:focus-within .article-detail {
-    max-height: 360px;
+  .article-card-border.is-expanded .article-card-side {
+    width: var(--panel-width, 320px);
     opacity: 1;
+    border-left-width: 1px;
+  }
+
+  .article-detail {
+    width: var(--panel-width, 320px);
+    padding: 20px 20px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
   .detail-col h4 {
@@ -508,8 +545,7 @@
     transition: width 560ms var(--ease) 120ms;
   }
 
-  .article-card-border:hover .breakdown-fill,
-  .article-card-border:focus-within .breakdown-fill {
+  .article-card-border.is-expanded .breakdown-fill {
     width: var(--target-width);
   }
 
@@ -587,6 +623,11 @@
   const CARD_STAGGER_MS = 55;            // 카드 등장 애니메이션 간격
   const SECTION_STAGGER_MS = 85;         // 섹션 등장 애니메이션 간격
   const MAX_STAGGER_STEPS = 8;           // 지연 누적 상한 (많은 항목일 때 마지막이 너무 늦게 뜨지 않게)
+
+  const CARD_EXPAND_DELAY_MS = 1500;     // 이 시간 이상 머물러야 카드가 옆으로 펼쳐짐
+  const CARD_EXPAND_MIN_PANEL_WIDTH = 260;
+  const CARD_EXPAND_MAX_PANEL_WIDTH = 340;
+  const CARD_EXPAND_GAP = 20;            // 본문과 세부 패널 사이 간격(px)
 
   // Intone이 새 topic을 만들 때 매기는 고정 대분류와 순서를 맞춥니다.
   const CATEGORY_ORDER = ["정치", "경제", "사회", "국제", "문화", "과학기술", "스포츠", "연예", "기타"];
@@ -775,6 +816,157 @@
     }).join("");
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // 카드 호버 확장 — 1.5초 이상 머물면 옆으로만 넓어지고, 다른 카드를
+  // 밀어내지 않고 그 위를 덮습니다(그리드 흐름에서 빠져나와 절대 위치로 전환).
+  // 마우스가 나가면 즉시 원래 크기로 줄어들며 그리드 흐름으로 되돌아갑니다.
+  // ═══════════════════════════════════════════════════════════════
+
+  // 한 번에 하나만 펼쳐지도록, 지금 펼쳐진 카드를 접는 함수를 기억해둡니다.
+  // 다른 카드가 펼쳐지거나 창 크기가 바뀌면 이걸 호출해서 즉시 접습니다.
+  let collapseCurrentlyExpandedCard = null;
+
+  window.addEventListener("resize", () => {
+    // 확장 위치/폭은 호버를 시작한 시점의 레이아웃 기준으로 계산되므로,
+    // 창 크기가 바뀌면 그 좌표가 더는 정확하지 않습니다 — 안전하게 접습니다.
+    collapseCurrentlyExpandedCard?.();
+  });
+
+  function setupCardHoverExpand(wrapper) {
+    let expandTimer = null;
+    let expanded = false;
+    let placeholder = null;
+
+    function clearExpandTimer() {
+      if (expandTimer) {
+        window.clearTimeout(expandTimer);
+        expandTimer = null;
+      }
+    }
+
+    function collapse() {
+      if (!expanded) return;
+      expanded = false;
+      if (collapseCurrentlyExpandedCard === collapse) {
+        collapseCurrentlyExpandedCard = null;
+      }
+      wrapper.classList.remove("is-expanded");
+
+      const collapsedWidth = placeholder ? placeholder.getBoundingClientRect().width : null;
+      if (collapsedWidth) {
+        wrapper.style.width = `${collapsedWidth}px`;
+      }
+
+      const cleanup = () => {
+        wrapper.style.position = "";
+        wrapper.style.top = "";
+        wrapper.style.left = "";
+        wrapper.style.width = "";
+        wrapper.style.removeProperty("--panel-width");
+        placeholder?.remove();
+        placeholder = null;
+      };
+
+      // transitionend를 우선 쓰되(정확한 타이밍), 브라우저가 이벤트를 못
+      // 보내는 예외 상황(예: 요소가 도중에 DOM에서 제거됨) 대비 타이머로 이중 방어.
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        wrapper.removeEventListener("transitionend", onTransitionEnd);
+        cleanup();
+      };
+      const onTransitionEnd = (event) => {
+        if (event.target === wrapper && event.propertyName === "width") finish();
+      };
+      wrapper.addEventListener("transitionend", onTransitionEnd);
+      window.setTimeout(finish, 500);
+    }
+
+    function expand() {
+      expandTimer = null;
+      if (expanded || !wrapper.isConnected) return;
+
+      const gridEl = wrapper.closest(".article-grid");
+      if (!gridEl) return;
+
+      // 다른 카드가 펼쳐져 있으면 먼저 접습니다 — 동시에 여러 개가
+      // 펼쳐져 좌표 계산이 꼬이는 걸 막습니다.
+      if (collapseCurrentlyExpandedCard && collapseCurrentlyExpandedCard !== collapse) {
+        collapseCurrentlyExpandedCard();
+      }
+
+      const gridRect = gridEl.getBoundingClientRect();
+      const rect = wrapper.getBoundingClientRect();
+      const collapsedWidth = rect.width;
+      const top = rect.top - gridRect.top;
+      let left = rect.left - gridRect.left;
+
+      // 그리드 자리를 그대로 예약해두는 자리표시자 — wrapper와 똑같은
+      // 위치(다음 형제로)에 넣어서, wrapper가 absolute로 빠져도 다른
+      // 카드가 밀려오지 않습니다.
+      placeholder = document.createElement("div");
+      placeholder.className = "article-card-placeholder";
+      placeholder.style.height = `${rect.height}px`;
+      wrapper.before(placeholder);
+
+      const panelWidth = Math.max(
+        CARD_EXPAND_MIN_PANEL_WIDTH,
+        Math.min(CARD_EXPAND_MAX_PANEL_WIDTH, collapsedWidth)
+      );
+      const expandedWidth = collapsedWidth + CARD_EXPAND_GAP + panelWidth;
+
+      // 오른쪽 끝 카드라 오른쪽으로 펼치면 그리드 밖으로 넘칠 경우,
+      // 왼쪽으로 방향을 바꿔서 항상 그리드 안에 들어오게 합니다.
+      if (left + expandedWidth > gridRect.width) {
+        left = Math.max(0, gridRect.width - expandedWidth);
+      }
+
+      wrapper.style.position = "absolute";
+      wrapper.style.top = `${top}px`;
+      wrapper.style.left = `${left}px`;
+      wrapper.style.width = `${collapsedWidth}px`;
+      wrapper.style.setProperty("--panel-width", `${panelWidth}px`);
+
+      // 폭을 먼저 "지금과 같은 값"으로 명시적으로 고정한 뒤, 다음 프레임에
+      // 목표 폭으로 바꿔야 transition이 실제로 애니메이션됩니다(같은 프레임에
+      // position: absolute와 목표 폭을 한 번에 주면 전환 없이 바로 점프해버림).
+      requestAnimationFrame(() => {
+        if (!expanded) return; // 그 사이 collapse()가 먼저 불렸으면 건너뜀
+        wrapper.classList.add("is-expanded");
+        wrapper.style.width = `${expandedWidth}px`;
+      });
+
+      expanded = true;
+      collapseCurrentlyExpandedCard = collapse;
+    }
+
+    // 마우스: 1.5초 이상 머물러야 펼쳐지고, 벗어나면 즉시 접힙니다.
+    wrapper.addEventListener("mouseenter", () => {
+      clearExpandTimer();
+      if (!expanded) {
+        expandTimer = window.setTimeout(expand, CARD_EXPAND_DELAY_MS);
+      }
+    });
+    wrapper.addEventListener("mouseleave", () => {
+      clearExpandTimer();
+      collapse();
+    });
+
+    // 키보드 포커스: 마우스처럼 "잠깐 스쳐가는" 신호가 아니라 명확한 진입/이탈
+    // 동작이라, 기다리지 않고 바로 펼치고/접습니다(Tab으로 훑을 때 1.5초씩
+    // 기다리게 하면 키보드 사용자 경험이 오히려 나빠지므로).
+    wrapper.addEventListener("focusin", () => {
+      clearExpandTimer();
+      if (!expanded) expand();
+    });
+    wrapper.addEventListener("focusout", (event) => {
+      if (wrapper.contains(event.relatedTarget)) return; // 카드 내부에서 포커스 이동한 것뿐
+      clearExpandTimer();
+      collapse();
+    });
+  }
+
   // 이 주제에 달린 기사들의 관점(stance) 분포를 스펙트럼 순서대로 칩으로 보여줍니다.
   function stanceSummary(articles) {
     const counts = new Map();
@@ -814,7 +1006,9 @@
       ? `<details class="reason"><summary>이 관점으로 본 이유</summary><p>${escapeHtml(analysis.direction.reason)}</p></details>`
       : "";
 
-    // 카드를 넓힐 때(호버/포커스) 펼쳐지는 세부 분석 — Intone 팝업과 같은 항목/배점.
+    // 카드를 1.5초 이상 호버/포커스하면 옆으로 펼쳐지며 나타나는 세부 분석
+    // — Intone 팝업과 같은 항목/배점. 세로가 아니라 가로로 펼쳐지는 패널이라
+    // 위아래로 쌓지 않고 신뢰도/어그로도를 한 칸에 순서대로 쌓습니다.
     const detailPanel = `
       <div class="article-detail">
         <div class="detail-col">
@@ -852,20 +1046,22 @@
     wrapper.style.animationDelay = `${delayMs}ms`;
     wrapper.innerHTML = `
       <div class="article-card${href ? "" : " article-card--nolink"}">
-        <div class="thumb">
-          ${analysis.image_url ? `<img src="${escapeHtml(analysis.image_url)}" alt="" loading="lazy">` : PLACEHOLDER_ICON}
-        </div>
-        <div class="body">
-          ${topicKicker}
-          <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
-          <div class="article-headline">
-            <h3 class="article-title">${headline}</h3>
-            ${dek}
+        <div class="article-card-main">
+          <div class="thumb">
+            ${analysis.image_url ? `<img src="${escapeHtml(analysis.image_url)}" alt="" loading="lazy">` : PLACEHOLDER_ICON}
           </div>
-          ${stanceBadge}
-          ${detailPanel}
-          ${reason}
+          <div class="body">
+            ${topicKicker}
+            <span class="article-source">${escapeHtml(domainOf(article.url))}</span>
+            <div class="article-headline">
+              <h3 class="article-title">${headline}</h3>
+              ${dek}
+            </div>
+            ${stanceBadge}
+            ${reason}
+          </div>
         </div>
+        <div class="article-card-side">${detailPanel}</div>
       </div>
     `;
 
@@ -875,16 +1071,20 @@
       thumbImg.addEventListener("error", () => { thumbEl.innerHTML = PLACEHOLDER_ICON; });
     }
 
-    // 카드 어디를 클릭하든 기사로 이동(편의 기능). 단, (1) 링크/펼치기(details) 요소를
-    // 눌렀거나 (2) 텍스트를 드래그 선택 중이거나 (3) 안전한 URL이 없으면 건너뜁니다.
+    // 본문(썸네일+제목) 어디를 클릭하든 기사로 이동(편의 기능). 세부 분석
+    // 패널은 기사 자체가 아니라 참고 정보라 클릭 대상에서 제외합니다.
+    // 단, (1) 링크/펼치기(details) 요소를 눌렀거나 (2) 텍스트를 드래그 선택
+    // 중이거나 (3) 안전한 URL이 없으면 건너뜁니다.
     if (href) {
-      const cardEl = wrapper.querySelector(".article-card");
-      cardEl.addEventListener("click", (event) => {
+      const mainEl = wrapper.querySelector(".article-card-main");
+      mainEl.addEventListener("click", (event) => {
         if (event.target.closest("a, details")) return;
         if (String(window.getSelection?.() || "").length > 0) return;
         window.open(href, "_blank", "noopener,noreferrer");
       });
     }
+
+    setupCardHoverExpand(wrapper);
 
     return wrapper;
   }
