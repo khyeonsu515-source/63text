@@ -326,7 +326,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 22px;
-    align-items: start;
+    align-items: stretch;
   }
 
   /* 그리드 자리를 그대로 예약해두는 투명 자리표시자 — 카드가 확장되며
@@ -527,6 +527,10 @@
      "애니메이션이 보인다"는 느낌은 전적으로 이 진입 효과가 담당합니다. */
   .article-detail {
     width: 100%;
+    /* 부모(article-card-side) 폭이 0이어도 내부 콘텐츠가 세로로 찌그러지지
+       않도록 방어 — overflow:hidden인 부모가 잘라서 가려줄 뿐, 내용 자체는
+       항상 제 폭을 유지합니다. */
+    min-width: max-content;
     padding: 20px 20px 20px 18px;
     display: flex;
     flex-direction: column;
@@ -713,12 +717,15 @@
   // 순수 유틸리티
   // ═══════════════════════════════════════════════════════════════
 
-  function escapeHtml(value) {
+ function escapeHtml(value) {
     return String(value ?? "")
-      .replace(/&/g, "&amp;")
+      // 1. 이미 정상적으로 인코딩된 HTML 엔티티(&#39;, &quot; 등)가 이중 변환되지 않도록 방어
+      .replace(/&(?!#?[a-zA-Z0-9]+;)/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;")
+      // 2. 작은따옴표(어퍼스트로피) 치환 추가
+      .replace(/'/g, "&#39;");
   }
 
   // 공개 쓰기 가능한 Firestore에서 온 URL이므로, http/https만 신뢰합니다.
