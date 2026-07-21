@@ -507,9 +507,8 @@
     width: 0;
     min-width: 0;
     overflow: hidden;
-    opacity: 0;
     border-left: 0 solid var(--border);
-    transition: opacity 220ms var(--ease) 60ms, border-left-width 380ms var(--ease);
+    transition: border-left-width 380ms var(--ease);
   }
 
   .article-card-border.is-sizing-locked .article-card-side {
@@ -518,16 +517,28 @@
   }
 
   .article-card-border.is-expanded .article-card-side {
-    opacity: 1;
     border-left-width: 1px;
   }
 
+  /* 표(세부 패널) 자체가 옆에서 슬며시 밀려 나오는 것처럼 보이도록, 폭이
+     넓어지는 것과는 별개로 내용에 페이드+슬라이드 진입 애니메이션을 줍니다.
+     .article-card-side의 폭은 바깥 카드 폭에 종속된 flex 결과라 자체
+     transition이 없으므로(그게 있으면 두 애니메이션이 어긋나 버그가 남),
+     "애니메이션이 보인다"는 느낌은 전적으로 이 진입 효과가 담당합니다. */
   .article-detail {
     width: 100%;
     padding: 20px 20px 20px 18px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    opacity: 0;
+    transform: translateX(-14px);
+    transition: opacity 340ms var(--ease) 90ms, transform 340ms var(--ease) 90ms;
+  }
+
+  .article-card-border.is-expanded .article-detail {
+    opacity: 1;
+    transform: translateX(0);
   }
 
   .detail-col h4 {
@@ -888,9 +899,11 @@
         wrapper.style.transition =
           `width ${CARD_COLLAPSE_ANIM_MS}ms var(--ease), ` +
           `left ${CARD_COLLAPSE_ANIM_MS}ms var(--ease), ` +
+          `height ${CARD_COLLAPSE_ANIM_MS}ms var(--ease), ` +
           `transform 320ms var(--ease), box-shadow 320ms var(--ease)`;
         wrapper.style.width = `${placeholderRect.width}px`;
         wrapper.style.left = `${placeholderRect.left - gridRect.left}px`;
+        wrapper.style.height = `${placeholderRect.height}px`;
       }
 
       const cleanup = () => {
@@ -899,6 +912,7 @@
         wrapper.style.top = "";
         wrapper.style.left = "";
         wrapper.style.width = "";
+        wrapper.style.height = "";
         wrapper.style.transition = "";
         wrapper.style.removeProperty("--main-width");
         placeholder?.remove();
@@ -937,6 +951,7 @@
       const gridRect = gridEl.getBoundingClientRect();
       const rect = wrapper.getBoundingClientRect();
       const collapsedWidth = rect.width;
+      const collapsedHeight = rect.height;
       const top = rect.top - gridRect.top;
       const originalLeft = rect.left - gridRect.left;
       const rowWidth = gridRect.width; // 그리드의 한 행은 항상 그리드 전체 폭을 씁니다.
@@ -954,18 +969,30 @@
       const panelWidth = rowWidth - collapsedWidth - CARD_EXPAND_GAP;
       if (panelWidth < CARD_EXPAND_MIN_PANEL_WIDTH) return;
 
+      // 세로 길이도 마찬가지 이유로 같은 줄에서 제일 큰 카드에 맞춥니다 —
+      // 안 그러면 확장된 카드의 세로 길이가 옆 카드보다 짧을 때 그 밑으로
+      // 다른 기사의 아래쪽 끝이 살짝 삐져나와 보입니다. 같은 줄인지는
+      // (자리표시자를 끼우기 전) 지금의 top 좌표가 거의 같은지로 판단합니다.
+      const rowSiblings = Array.from(gridEl.querySelectorAll(".article-card-border")).filter((el) => {
+        if (el === wrapper) return true;
+        const elTop = el.getBoundingClientRect().top - gridRect.top;
+        return Math.abs(elTop - top) <= 2;
+      });
+      const rowHeight = Math.max(collapsedHeight, ...rowSiblings.map((el) => el.getBoundingClientRect().height));
+
       // 그리드 자리를 그대로 예약해두는 자리표시자 — wrapper와 똑같은
       // 위치(다음 형제로)에 넣어서, wrapper가 absolute로 빠져도 다른
       // 카드가 밀려오지 않습니다.
       placeholder = document.createElement("div");
       placeholder.className = "article-card-placeholder";
-      placeholder.style.height = `${rect.height}px`;
+      placeholder.style.height = `${collapsedHeight}px`;
       wrapper.before(placeholder);
 
       wrapper.style.position = "absolute";
       wrapper.style.top = `${top}px`;
       wrapper.style.left = `${originalLeft}px`;
       wrapper.style.width = `${collapsedWidth}px`;
+      wrapper.style.height = `${collapsedHeight}px`;
       if (mainWidth) wrapper.style.setProperty("--main-width", `${mainWidth}px`);
 
       // Intone 팝업이 아래로 늘어나다가 화면 끝에 부딪히면 그때부터 반대
@@ -994,9 +1021,11 @@
         wrapper.style.transition =
           `width ${CARD_EXPAND_ANIM_MS}ms linear, ` +
           `left ${phase2Ms}ms linear ${phase1Ms}ms, ` +
+          `height ${CARD_EXPAND_ANIM_MS}ms var(--ease), ` +
           `transform 320ms var(--ease), box-shadow 320ms var(--ease)`;
         wrapper.style.width = `${rowWidth}px`;
         wrapper.style.left = "0px";
+        wrapper.style.height = `${rowHeight}px`;
       });
 
       expanded = true;
